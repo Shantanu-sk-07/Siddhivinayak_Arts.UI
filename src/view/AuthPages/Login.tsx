@@ -52,9 +52,6 @@ export default function Login() {
           case 'SUPER_ADMIN':
             navigate('/admin/dashboard');
             break;
-          case 'STAFF':
-            navigate('/staff/dashboard');
-            break;
           case 'CUSTOMER':
             navigate('/customer/dashboard');
             break;

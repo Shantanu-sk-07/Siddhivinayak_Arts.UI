@@ -1,4 +1,4 @@
-// src/hooks/usePermissions.ts
+// src/utils/usePermissions.ts
 import { useMemo } from 'react';
 import { useAuth } from './useAuth';
 import { rolePermissions, Permission } from '@/utils/permissions';
@@ -33,8 +33,8 @@ export const usePermissions = () => {
   }, [permissions]);
 
   const isAdmin = user?.role === 'SUPER_ADMIN';
-  const isStaff = user?.role === 'STAFF';
   const isCustomer = user?.role === 'CUSTOMER';
+  const isStaff = false; // No longer exists
 
   return {
     permissions,

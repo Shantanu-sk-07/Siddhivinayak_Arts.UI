@@ -17,26 +17,23 @@ import MyBookings from '@/view/DashboardPages/Customer/MyBookings';
 import PaymentHistory from '@/view/DashboardPages/Customer/PaymentHistory';
 import QRScanPage from '@/view/DashboardPages/Customer/QRScanPage';
 
-// Staff Pages
-import StaffDashboard from '@/view/DashboardPages/Staff/StaffDashboard';
-import QRScanVerification from '@/view/DashboardPages/Staff/QRScanVerification';
-import PickupManagement from '@/view/DashboardPages/Staff/PickupManagement';
-
-// Admin Pages
+// Admin Pages (Super Admin only - includes all former staff pages)
 import AdminDashboard from '@/view/DashboardPages/SuperAdmin/AdminDashboard';
 import GanpatiManagement from '@/view/DashboardPages/SuperAdmin/GanpatiManagement';
 import BookingManagement from '@/view/DashboardPages/SuperAdmin/BookingManagement';
 import PaymentVerification from '@/view/DashboardPages/SuperAdmin/PaymentVerification';
-import StaffManagement from '@/view/DashboardPages/SuperAdmin/StaffManagement';
 import CustomerManagement from '@/view/DashboardPages/SuperAdmin/CustomerManagement';
 import Reports from '@/view/DashboardPages/SuperAdmin/Reports';
+// Former staff pages - now under admin
+import PickupManagement from '@/view/DashboardPages/SuperAdmin/PickupManagement';
+import QRScanVerification from '@/view/DashboardPages/SuperAdmin/QRScanVerification';
 
 // Website Pages
 import HomePage from '@/view/WebsitePages/HomePage';
 import AboutUs from '@/view/WebsitePages/AboutUs';
 import ContactUs from '@/view/WebsitePages/ContactUs';
 
-// Profile & Settings Pages (create these if needed)
+// Profile & Settings Pages
 import Profile from '@/view/DashboardPages/SuperAdmin/Profile';
 import Settings from '@/view/DashboardPages/SuperAdmin/Settings';
 
@@ -50,12 +47,9 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   }
   
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard based on role
     switch (user.role) {
       case 'SUPER_ADMIN':
         return <Navigate to={UrlPath.ADMIN_DASHBOARD} replace />;
-      case 'STAFF':
-        return <Navigate to={UrlPath.STAFF_DASHBOARD} replace />;
       case 'CUSTOMER':
         return <Navigate to={UrlPath.CUSTOMER_DASHBOARD} replace />;
       default:
@@ -73,7 +67,6 @@ export default function AppRoutes() {
     if (!user) return UrlPath.LOGIN;
     switch (user.role) {
       case 'SUPER_ADMIN': return UrlPath.ADMIN_DASHBOARD;
-      case 'STAFF': return UrlPath.STAFF_DASHBOARD;
       case 'CUSTOMER': return UrlPath.CUSTOMER_DASHBOARD;
       default: return UrlPath.LOGIN;
     }
@@ -93,7 +86,7 @@ export default function AppRoutes() {
 
       {/* Common Protected Routes */}
       <Route path={UrlPath.PROFILE} element={
-        <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'STAFF', 'CUSTOMER']}>
+        <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'CUSTOMER']}>
           <DashboardLayout />
         </ProtectedRoute>
       }>
@@ -101,7 +94,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route path={UrlPath.SETTINGS} element={
-        <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'STAFF', 'CUSTOMER']}>
+        <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'CUSTOMER']}>
           <DashboardLayout />
         </ProtectedRoute>
       }>
@@ -122,18 +115,7 @@ export default function AppRoutes() {
         <Route path="qr/:bookingId" element={<QRScanPage />} />
       </Route>
 
-      {/* Staff Routes */}
-      <Route path="/staff" element={
-        <ProtectedRoute allowedRoles={['STAFF']}>
-          <DashboardLayout />
-        </ProtectedRoute>
-      }>
-        <Route path="dashboard" element={<StaffDashboard />} />
-        <Route path="scan" element={<QRScanVerification />} />
-        <Route path="pickup" element={<PickupManagement />} />
-      </Route>
-
-      {/* Admin Routes */}
+      {/* Admin Routes (Super Admin) - includes former staff pages */}
       <Route path="/admin" element={
         <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
           <DashboardLayout />
@@ -143,9 +125,10 @@ export default function AppRoutes() {
         <Route path="ganpati" element={<GanpatiManagement />} />
         <Route path="bookings" element={<BookingManagement />} />
         <Route path="payments" element={<PaymentVerification />} />
-        <Route path="staff" element={<StaffManagement />} />
         <Route path="customers" element={<CustomerManagement />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="pickups" element={<PickupManagement />} />
+        <Route path="scan" element={<QRScanVerification />} />
       </Route>
 
       {/* Default Redirect */}

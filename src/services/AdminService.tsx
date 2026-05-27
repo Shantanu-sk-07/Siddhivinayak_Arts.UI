@@ -1,9 +1,8 @@
-// src/services/adminService.ts
 import { apiClient, apiFormData } from './api';
 import { 
   GanpatiResponseDto, ApiResponse, BookingResponseDto, 
   PaymentResponseDto, StaffResponseDto, CustomerResponseDto, 
-  DashboardStats, StaffFormData 
+  DashboardStats, StaffFormData, PickupStats 
 } from '@/types';
 
 interface ReportData {
@@ -19,7 +18,6 @@ interface ReportData {
 }
 
 export const adminService = {
-  // Ganpati Management
   async getAllGanpati(): Promise<ApiResponse<GanpatiResponseDto[]>> {
     return apiClient<ApiResponse<GanpatiResponseDto[]>>('/admin/ganpati');
   },
@@ -38,7 +36,6 @@ export const adminService = {
     });
   },
 
-  // Booking Management
   async getAllBookings(): Promise<ApiResponse<BookingResponseDto[]>> {
     return apiClient<ApiResponse<BookingResponseDto[]>>('/admin/bookings');
   },
@@ -62,7 +59,6 @@ export const adminService = {
     });
   },
 
-  // Payment Management
   async getPendingPayments(): Promise<ApiResponse<PaymentResponseDto[]>> {
     return apiClient<ApiResponse<PaymentResponseDto[]>>('/admin/payments/pending');
   },
@@ -74,7 +70,6 @@ export const adminService = {
     });
   },
 
-  // Staff Management
   async getAllStaff(): Promise<ApiResponse<StaffResponseDto[]>> {
     return apiClient<ApiResponse<StaffResponseDto[]>>('/admin/staff');
   },
@@ -99,12 +94,57 @@ export const adminService = {
     });
   },
 
-  // Customer Management
   async getAllCustomers(): Promise<ApiResponse<CustomerResponseDto[]>> {
     return apiClient<ApiResponse<CustomerResponseDto[]>>('/admin/customers');
   },
 
-  // Dashboard & Reports
+  async getTodaysPickups(): Promise<ApiResponse<BookingResponseDto[]>> {
+    return apiClient<ApiResponse<BookingResponseDto[]>>('/admin/pickups/today');
+  },
+
+  async completePickup(bookingId: string): Promise<ApiResponse<BookingResponseDto>> {
+    return apiClient<ApiResponse<BookingResponseDto>>(`/admin/pickups/${bookingId}/complete`, {
+      method: 'POST',
+    });
+  },
+
+  async getPickupStats(): Promise<ApiResponse<PickupStats>> {
+    return apiClient<ApiResponse<PickupStats>>('/admin/pickups/stats');
+  },
+
+  async searchByPhone(phone: string): Promise<ApiResponse<{ booking: BookingResponseDto }>> {
+    return apiClient<ApiResponse<{ booking: BookingResponseDto }>>(`/admin/pickups/search?phone=${phone}`);
+  },
+
+  async verifyBooking(bookingId: string): Promise<ApiResponse<BookingResponseDto>> {
+    return apiClient<ApiResponse<BookingResponseDto>>('/admin/pickups/verify-booking', {
+      method: 'POST',
+      body: JSON.stringify(bookingId),
+    });
+  },
+
+  async printReceipt(bookingId: string): Promise<Blob> {
+    const token = localStorage.getItem('auth-storage');
+    let authToken = '';
+    if (token) {
+      try {
+        const parsed = JSON.parse(token);
+        authToken = parsed.state?.token || parsed.token;
+      } catch {
+        authToken = '';
+      }
+    }
+    
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/admin/pickups/receipt/${bookingId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to print receipt');
+    }
+    return response.blob();
+  },
+
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     return apiClient<ApiResponse<DashboardStats>>('/admin/dashboard-stats');
   },

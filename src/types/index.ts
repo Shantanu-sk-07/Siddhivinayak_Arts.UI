@@ -1,6 +1,4 @@
-// src/types/index.ts
-
-export type UserRole = 'CUSTOMER' | 'STAFF' | 'SUPER_ADMIN';
+export type UserRole = 'CUSTOMER' | 'SUPER_ADMIN';  // STAFF removed
 
 export interface User {
   id: string;
@@ -10,6 +8,13 @@ export interface User {
   role: UserRole;
   profileImage?: string;
   createdAt: string;
+}
+
+export interface PickupStats {
+  todayPickups: number;
+  completedToday: number;
+  pendingToday: number;
+  totalPickups: number;
 }
 
 export interface CustomerResponseDto {

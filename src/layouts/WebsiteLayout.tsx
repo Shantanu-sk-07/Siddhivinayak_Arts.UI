@@ -21,7 +21,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/utils/useAuth';
 import { UrlPath } from '@/constants/UrlPath';
-import Logo from '@/assets/Logo.jpg'
+import Logo from '@/assets/Logo.avif'
 
 const BackgroundWrapper = styled(Box)({
   position: 'relative',
@@ -55,6 +55,8 @@ export default function WebsiteLayout() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
+  const currentYear = new Date().getFullYear();
+
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -76,15 +78,15 @@ export default function WebsiteLayout() {
     setAnchorEl(null);
   };
 
-  const getDashboardPath = () => {
-    if (!user) return UrlPath.LOGIN;
-    switch (user.role) {
-      case 'SUPER_ADMIN': return UrlPath.ADMIN_DASHBOARD;
-      case 'STAFF': return UrlPath.STAFF_DASHBOARD;
-      case 'CUSTOMER': return UrlPath.CUSTOMER_DASHBOARD;
-      default: return UrlPath.LOGIN;
-    }
-  };
+  // src/layouts/WebsiteLayout.tsx - Update getDashboardPath
+const getDashboardPath = () => {
+  if (!user) return UrlPath.LOGIN;
+  switch (user.role) {
+    case 'SUPER_ADMIN': return UrlPath.ADMIN_DASHBOARD;
+    case 'CUSTOMER': return UrlPath.CUSTOMER_DASHBOARD;
+    default: return UrlPath.LOGIN;
+  }
+};
 
   return (
     <BackgroundWrapper>
@@ -267,7 +269,7 @@ export default function WebsiteLayout() {
           >
             🙏 Ganpati Bappa Morya 🙏
             <br />
-            © 2025 Siddhivinayak Arts. All rights reserved.
+            © {currentYear} Siddhivinayak Arts. All rights reserved.
           </Typography>
         </Container>
       </FooterSection>

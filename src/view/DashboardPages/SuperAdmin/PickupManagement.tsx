@@ -13,7 +13,7 @@ import { motion } from 'framer-motion';
 import { BookingResponseDto, PickupStats } from '@/types';
 import { showSnackbar } from '@/components/uncontrolled/ToastMessage';
 import { UniversalTable, Column, ACTION_KEY } from '@/components/uncontrolled/UniversalTable';
-import { staffService } from '@/services/StaffService';
+import { adminService } from '@/services/AdminService';
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 type BookingRecord = BookingResponseDto & Record<string, unknown>;
@@ -75,7 +75,7 @@ export default function PickupManagement() {
   const fetchPickups = async () => {
     try {
       setLoading(true);
-      const response = await staffService.getTodaysPickups();
+      const response = await adminService.getTodaysPickups();
       if (response.success && response.data) setPickups(response.data);
     } catch { showSnackbar('error', 'Failed to fetch pickups'); }
     finally { setLoading(false); }
@@ -83,7 +83,7 @@ export default function PickupManagement() {
 
   const fetchStats = async () => {
     try {
-      const response = await staffService.getPickupStats();
+      const response = await adminService.getPickupStats();
       if (response.success && response.data) setStats(response.data);
     } catch { console.error('Failed to fetch stats'); }
   };
@@ -91,7 +91,7 @@ export default function PickupManagement() {
   const handleSearchBooking = async () => {
     if (!searchPhone) { showSnackbar('warning', 'Please enter mobile number'); return; }
     try {
-      const response = await staffService.searchByPhone(searchPhone);
+      const response = await adminService.searchByPhone(searchPhone);
       if (response.success && response.data?.booking) setSearchResult(response.data.booking);
       else { showSnackbar('error', 'No pickup found for this number'); setSearchResult(null); }
     } catch { showSnackbar('error', 'Search failed'); }
@@ -99,7 +99,7 @@ export default function PickupManagement() {
 
   const handleCompletePickup = async (booking: BookingResponseDto) => {
     try {
-      const response = await staffService.completePickup(booking.id);
+      const response = await adminService.completePickup(booking.id);
       if (response.success) {
         showSnackbar('success', 'Pickup completed successfully');
         await fetchPickups(); await fetchStats();
@@ -110,7 +110,7 @@ export default function PickupManagement() {
 
   const handlePrintReceipt = async (booking: BookingResponseDto) => {
     try {
-      const blob = await staffService.printReceipt(booking.id);
+      const blob = await adminService.printReceipt(booking.id);
       const url = window.URL.createObjectURL(blob);
       const printWindow = window.open(url, '_blank');
       if (printWindow) printWindow.print();

@@ -115,8 +115,7 @@ export default function HomePage() {
   const theme = useTheme();
   const [featuredGanpati, setFeaturedGanpati] = useState<Ganpati[]>([]);
   const [loading, setLoading] = useState(true);
-  const currentYear = new Date().getFullYear();
-
+  
   useEffect(() => {
     fetchFeaturedGanpati();
   }, []);
@@ -234,6 +233,7 @@ export default function HomePage() {
         </Container>
       </HeroSection>
 
+      {/* Featured Ganpati Collection */}
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -328,6 +328,7 @@ export default function HomePage() {
         </Box>
       </Container>
 
+      {/* Our Achievements */}
       <Box sx={{ py: 6 }}>
         <Container maxWidth="lg">
           <motion.div
@@ -371,6 +372,7 @@ export default function HomePage() {
         </Container>
       </Box>
 
+      {/* How It Works */}
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -411,100 +413,6 @@ export default function HomePage() {
           ))}
         </Grid>
       </Container>
-
-      <Box sx={{ bgcolor: alpha('#1a1a1a', 0.9), color: 'white', py: 5 }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <Forest sx={{ fontSize: 32, color: theme.palette.secondary.main }} />
-                <Typography variant="h6" fontWeight={700}>
-                  Siddhivinayak Arts
-                </Typography>
-              </Box>
-              <Typography variant="body2" sx={{ opacity: 0.7, lineHeight: 1.6 }}>
-                Premium eco-friendly Ganpati idols since 1995. 
-                Serving devotees with love and devotion for over 25 years.
-              </Typography>
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                Quick Links
-              </Typography>
-              <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
-                <li>
-                  <Button 
-                    onClick={() => navigate('/')}
-                    sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 }, justifyContent: 'flex-start', p: 0, py: 0.5 }}
-                  >
-                    Home
-                  </Button>
-                </li>
-                <li>
-                  <Button 
-                    onClick={() => navigate('/about')}
-                    sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 }, justifyContent: 'flex-start', p: 0, py: 0.5 }}
-                  >
-                    About Us
-                  </Button>
-                </li>
-                <li>
-                  <Button 
-                    onClick={() => navigate('/contact')}
-                    sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 }, justifyContent: 'flex-start', p: 0, py: 0.5 }}
-                  >
-                    Contact
-                  </Button>
-                </li>
-                <li>
-                  <Button 
-                    onClick={() => navigate('/customer/ganpati')}
-                    sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 }, justifyContent: 'flex-start', p: 0, py: 0.5 }}
-                  >
-                    Browse Ganpati
-                  </Button>
-                </li>
-              </Box>
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                Contact Info
-              </Typography>
-              <Box sx={{ opacity: 0.7 }}>
-                <Box display="flex" alignItems="center" gap={2} mb={1.5}>
-                  <span>📞</span>
-                  <Typography variant="body2">+91 98765 43210</Typography>
-                </Box>
-                <Box display="flex" alignItems="center" gap={2} mb={1.5}>
-                  <span>✉️</span>
-                  <Typography variant="body2">info@siddhivinayakarts.com</Typography>
-                </Box>
-                <Box display="flex" alignItems="center" gap={2} mb={1.5}>
-                  <span>📍</span>
-                  <Typography variant="body2">Pune, Maharashtra, India</Typography>
-                </Box>
-              </Box>
-            </Grid>
-          </Grid>
-          
-          <Typography 
-            variant="body2" 
-            textAlign="center" 
-            sx={{ 
-              mt: 4, 
-              pt: 3, 
-              borderTop: '1px solid rgba(255,255,255,0.1)',
-              opacity: 0.6
-            }}
-          >
-            🙏 Ganpati Bappa Morya 🙏
-            <br />
-            © {currentYear} Siddhivinayak Arts. All rights reserved.
-          </Typography>
-        </Container>
-      </Box>
     </BackgroundWrapper>
   );
 }

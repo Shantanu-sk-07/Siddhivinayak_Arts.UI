@@ -7,7 +7,7 @@ import {
 import { QrCodeScanner, CheckCircle, VerifiedUser, Receipt, Videocam, VideocamOff, Refresh } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastMessage';
-import { staffService } from '@/services/StaffService';
+import { adminService } from '@/services/AdminService';
 import { BookingResponseDto } from '@/types';
 
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -109,7 +109,7 @@ export default function QRScanVerification() {
     try {
       setLoading(true);
       const qrData = JSON.parse(decodedText);
-      const response = await staffService.verifyBooking(qrData.bookingId);
+      const response = await adminService.verifyBooking(qrData.bookingId);
       if (response.success && response.data) {
         setScanResult(response.data);
         setRecentScans(prev => [response.data, ...prev].slice(0, 10));
@@ -135,7 +135,7 @@ export default function QRScanVerification() {
     const confirmed = await showConfirmation(`Verify and complete pickup for ${booking.customerName}?`, 'Verify Booking', async () => {});
     if (confirmed) {
       try {
-        const response = await staffService.completePickup(booking.id);
+        const response = await adminService.completePickup(booking.id);
         if (response.success) {
           showSnackbar('success', 'Pickup completed!');
           setScanResult(null);
@@ -149,7 +149,7 @@ export default function QRScanVerification() {
 
   const handlePrintReceipt = async (booking: BookingResponseDto) => {
     try {
-      const blob = await staffService.printReceipt(booking.id);
+      const blob = await adminService.printReceipt(booking.id);
       const url = window.URL.createObjectURL(blob);
       window.open(url, '_blank');
     } catch {
