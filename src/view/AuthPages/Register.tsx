@@ -19,6 +19,8 @@ import EmailField from '@/components/controlled/EmailField';
 import MobileField from '@/components/controlled/MobileField';
 import PasswordField from '@/components/controlled/PasswordField';
 import { UrlPath } from '@/constants/UrlPath';
+import { authService } from '@/services/AuthService';
+import Logo from '@/assets/Logo.jfif'
 
 interface RegisterFormData {
   name: string;
@@ -48,33 +50,18 @@ export default function Register() {
     setError(null);
     
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          password: data.password,
-        }),
+      const response = await authService.register({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
       });
       
-      // Handle non-OK responses
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('Registration service is temporarily unavailable. Please try again later.');
-        }
-        const result = await response.json();
-        throw new Error(result.message || 'Registration failed');
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        showSnackbar('success', 'Registration successful! Please login.');
+      if (response.success) {
+        showSnackbar('success', response.message || 'Registration successful! Please login.');
         navigate(UrlPath.LOGIN);
       } else {
-        setError(result.message || 'Registration failed');
+        setError(response.message || 'Registration failed');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
@@ -99,7 +86,7 @@ export default function Register() {
         <Card sx={{ width: '100%', borderRadius: 4, boxShadow: 3 }}>
           <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
             <Box textAlign="center" mb={3}>
-              <img src="/logo.png" alt="Siddhivinayak Arts" style={{ height: 80 }} />
+              <img src={Logo} alt="Siddhivinayak Arts" style={{ height: 80 }} />
               <Typography variant="h5" sx={{ mt: 2, fontWeight: 600 }}>
                 Create Account
               </Typography>

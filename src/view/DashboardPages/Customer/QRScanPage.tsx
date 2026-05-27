@@ -2,33 +2,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  Chip,
-  LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Box, Typography, Paper, Button, Card, CardContent, Grid, Chip, LinearProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import {
-  LocationOn,
-  Phone,
-  Email,
-} from '@mui/icons-material';
+import { LocationOn, Phone, Email } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
-import { Booking } from '@/types';
 import { showSnackbar } from '@/components/uncontrolled/ToastMessage';
-
-interface BookingDetailsResponse {
-  success: boolean;
-  data: Booking;
-}
+import { customerService } from '@/services/CustomerService';
+import { BookingResponseDto } from '@/types';
 
 interface QRValueData {
   bookingId: string;
@@ -41,7 +22,7 @@ interface QRValueData {
 export default function QRScanPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [booking, setBooking] = useState<BookingResponseDto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [countdown, setCountdown] = useState<number>(0);
   const [instructionsOpen, setInstructionsOpen] = useState<boolean>(false);
@@ -53,13 +34,11 @@ export default function QRScanPage() {
       navigate('/customer/bookings');
       return;
     }
-
     try {
       setLoading(true);
-      const response = await fetch(`/api/customer/bookings/${bookingId}`);
-      const data: BookingDetailsResponse = await response.json();
-      if (data.success && data.data) {
-        setBooking(data.data);
+      const response = await customerService.getBookingDetails(bookingId);
+      if (response.success && response.data) {
+        setBooking(response.data);
       } else {
         showSnackbar('error', 'Booking not found');
         navigate('/customer/bookings');
@@ -71,26 +50,17 @@ export default function QRScanPage() {
     }
   }, [bookingId, navigate]);
 
-  useEffect(() => {
-    fetchBookingDetails();
-  }, [fetchBookingDetails]);
+  useEffect(() => { fetchBookingDetails(); }, [fetchBookingDetails]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (countdown > 0) {
-      interval = setInterval(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
+      interval = setInterval(() => { setCountdown(prev => prev - 1); }, 1000);
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => { if (interval) clearInterval(interval); };
   }, [countdown]);
 
-  const handleRefreshQR = (): void => {
-    setCountdown(30);
-    showSnackbar('success', 'QR code refreshed');
-  };
+  const handleRefreshQR = (): void => { setCountdown(30); showSnackbar('success', 'QR code refreshed'); };
 
   const handleDownloadQR = (): void => {
     const svgElement = qrContainerRef.current?.querySelector('svg');
@@ -99,7 +69,6 @@ export default function QRScanPage() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
-      
       img.onload = () => {
         canvas.width = img.width;
         canvas.height = img.height;
@@ -111,7 +80,6 @@ export default function QRScanPage() {
         link.click();
         showSnackbar('success', 'QR code downloaded');
       };
-      
       img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
     } else {
       showSnackbar('error', 'QR code not found');
@@ -128,23 +96,12 @@ export default function QRScanPage() {
             <head>
               <title>QR Code - ${booking?.bookingId}</title>
               <style>
-                body {
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  height: 100vh;
-                  flex-direction: column;
-                  font-family: Arial, sans-serif;
-                }
-                .qr-container {
-                  text-align: center;
-                }
+                body { display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; font-family: Arial; }
+                .qr-container { text-align: center; }
               </style>
             </head>
             <body>
-              <div class="qr-container">
-                ${qrContent}
-              </div>
+              <div class="qr-container">${qrContent}</div>
             </body>
           </html>
         `);
@@ -186,16 +143,14 @@ export default function QRScanPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-        Festival Day QR Code
-      </Typography>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>Festival Day QR Code</Typography>
       <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
         Scan this QR code at the festival counter for quick verification and pickup
       </Typography>
 
       <Grid container spacing={4}>
         {/* QR Code Section */}
-        <Grid size={{xs: 12, md: 6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
             <div id="qr-container" ref={qrContainerRef}>
               {isQRValid ? (
@@ -218,39 +173,27 @@ export default function QRScanPage() {
                 </>
               ) : (
                 <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography variant="h6" color="error">
-                    QR Code Not Available
-                  </Typography>
+                  <Typography variant="h6" color="error">QR Code Not Available</Typography>
                   <Typography variant="body2" color="textSecondary">
                     QR code is only available for confirmed bookings
                   </Typography>
                 </Box>
               )}
             </div>
-
             {isQRValid && (
               <Box display="flex" gap={2} justifyContent="center" sx={{ mt: 3, flexWrap: 'wrap' }}>
-                <Button variant="outlined" onClick={handleRefreshQR}>
-                  Refresh QR
-                </Button>
-                <Button variant="outlined" onClick={handleDownloadQR}>
-                  Download
-                </Button>
-                <Button variant="outlined" onClick={handlePrintQR}>
-                  Print
-                </Button>
+                <Button variant="outlined" onClick={handleRefreshQR}>Refresh QR</Button>
+                <Button variant="outlined" onClick={handleDownloadQR}>Download</Button>
+                <Button variant="outlined" onClick={handlePrintQR}>Print</Button>
               </Box>
             )}
           </Paper>
         </Grid>
 
         {/* Booking Details Section */}
-        <Grid size={{xs: 12, md: 6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Booking Information
-            </Typography>
-            
+            <Typography variant="h6" gutterBottom>Booking Information</Typography>
             <Card variant="outlined" sx={{ mb: 2 }}>
               <CardContent>
                 <Grid container spacing={2}>
@@ -260,11 +203,7 @@ export default function QRScanPage() {
                   </Grid>
                   <Grid size={6}>
                     <Typography variant="caption" color="textSecondary">Status</Typography>
-                    <Chip 
-                      label={booking.status.replace('_', ' ')} 
-                      color={booking.status === 'CONFIRMED' ? 'success' : 'warning'}
-                      size="small"
-                    />
+                    <Chip label={booking.status.replace('_', ' ')} color={booking.status === 'CONFIRMED' ? 'success' : 'warning'} size="small" />
                   </Grid>
                   <Grid size={6}>
                     <Typography variant="caption" color="textSecondary">Ganpati Name</Typography>
@@ -278,9 +217,7 @@ export default function QRScanPage() {
               </CardContent>
             </Card>
 
-            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-              Customer Details
-            </Typography>
+            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Customer Details</Typography>
             <Card variant="outlined" sx={{ mb: 2 }}>
               <CardContent>
                 <Grid container spacing={2}>
@@ -300,9 +237,7 @@ export default function QRScanPage() {
               </CardContent>
             </Card>
 
-            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-              Payment Summary
-            </Typography>
+            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Payment Summary</Typography>
             <Card variant="outlined" sx={{ mb: 2 }}>
               <CardContent>
                 <Box display="flex" justifyContent="space-between" mb={1}>
@@ -311,9 +246,7 @@ export default function QRScanPage() {
                 </Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Amount Paid</Typography>
-                  <Typography variant="body2" fontWeight={600} color="success.main">
-                    ₹{booking.advancePaid.toLocaleString()}
-                  </Typography>
+                  <Typography variant="body2" fontWeight={600} color="success.main">₹{booking.advancePaid.toLocaleString()}</Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Remaining</Typography>
@@ -324,12 +257,7 @@ export default function QRScanPage() {
               </CardContent>
             </Card>
 
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<LocationOn />}
-              onClick={() => setInstructionsOpen(true)}
-            >
+            <Button fullWidth variant="outlined" startIcon={<LocationOn />} onClick={() => setInstructionsOpen(true)}>
               Festival Location & Instructions
             </Button>
           </Paper>
@@ -340,32 +268,22 @@ export default function QRScanPage() {
       <Dialog open={instructionsOpen} onClose={() => setInstructionsOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box display="flex" alignItems="center" gap={1}>
-            <LocationOn color="primary" />
-            Festival Location & Instructions
+            <LocationOn color="primary" /> Festival Location & Instructions
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-            Venue Details
-          </Typography>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>Venue Details</Typography>
           <Card variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
             <Typography variant="body2">
-              <strong>Siddhivinayak Arts Festival Ground</strong>
-              <br />
-              Near Dadar Railway Station,
-              <br />
-              Dadar West, Mumbai - 400028
-              <br />
-              <br />
-              📅 Date: Ganesh Chaturthi Day
-              <br />
+              <strong>Siddhivinayak Arts Festival Ground</strong><br />
+              Near Dadar Railway Station,<br />
+              Dadar West, Mumbai - 400028<br /><br />
+              📅 Date: Ganesh Chaturthi Day<br />
               ⏰ Time: 8:00 AM - 8:00 PM
             </Typography>
           </Card>
 
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-            Important Instructions
-          </Typography>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>Important Instructions</Typography>
           <Box component="ul" sx={{ pl: 2 }}>
             <li>Please carry a printed copy of this QR code or have it ready on your phone</li>
             <li>Reach the venue at least 30 minutes before your scheduled pickup time</li>
@@ -376,9 +294,7 @@ export default function QRScanPage() {
             <li>For any assistance, contact our helpdesk at the venue</li>
           </Box>
 
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
-            Contact for Festival Day
-          </Typography>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>Contact for Festival Day</Typography>
           <Card variant="outlined" sx={{ p: 2, bgcolor: '#e3f2fd' }}>
             <Box display="flex" alignItems="center" gap={1} mb={1}>
               <Phone fontSize="small" color="primary" />
@@ -392,11 +308,7 @@ export default function QRScanPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInstructionsOpen(false)}>Close</Button>
-          <Button 
-            variant="contained" 
-            startIcon={<LocationOn />}
-            onClick={() => window.open('https://maps.google.com/?q=Dadar+Mumbai', '_blank')}
-          >
+          <Button variant="contained" startIcon={<LocationOn />} onClick={() => window.open('https://maps.google.com/?q=Dadar+Mumbai', '_blank')}>
             Open in Maps
           </Button>
         </DialogActions>

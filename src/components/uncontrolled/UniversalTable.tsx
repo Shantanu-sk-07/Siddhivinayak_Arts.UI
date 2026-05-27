@@ -19,19 +19,29 @@ import {
   type SxProps,
   CircularProgress,
   Typography,
+  useTheme,
+  alpha,
+  Fade,
+  Zoom,
+  Chip,
+  InputAdornment,
 } from "@mui/material";
-import { useMemo, useState, type ReactNode } from "react";
-import { IconTrashX } from "@tabler/icons-react";
+import { useMemo, useState, type ReactNode, useEffect, useRef } from "react";
+import { IconTrashX, IconSearch, IconFilterOff } from "@tabler/icons-react";
 import ExportIcons from "@/utils/ExportIcons";
 import { iconMap } from "@/utils/Icons";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const ACTION_KEY = "actionbutton" as const;
+export const SR_NO_KEY = "sr_no" as const;
 
 export type Column<T> = {
   key: keyof T | typeof ACTION_KEY;
   label: string;
-  render?: (row: T) => ReactNode;
+  render?: (row: T, index?: number) => ReactNode;
   exportable?: boolean;
+  minWidth?: number | string;
+  width?: number | string;
 };
 
 export type DropdownOption = {
@@ -52,8 +62,9 @@ interface TableStyles {
   paperSx?: SxProps;
 }
 
-interface UniversalTableProps<T extends Record<string, unknown>>
-  extends TableStyles {
+interface UniversalTableProps<
+  T extends Record<string, unknown>,
+> extends TableStyles {
   data: readonly T[];
   columns: readonly Column<T>[];
   caption?: ReactNode;
@@ -64,11 +75,12 @@ interface UniversalTableProps<T extends Record<string, unknown>>
   showExport?: boolean;
   enableCheckbox?: boolean;
   highlightColor?: string;
-   loading?: boolean;
+  loading?: boolean;
   getRowId?: (row: T, index: number) => string | number;
   onSelectionChange?: (rows: T[]) => void;
   onDeleteSelected?: (rows: T[]) => void;
-
+  emptyStateMessage?: string;
+  emptyStateIcon?: ReactNode;
   dropdown?: {
     key: keyof T;
     options: readonly DropdownOption[];
@@ -77,25 +89,34 @@ interface UniversalTableProps<T extends Record<string, unknown>>
     width?: number;
     sx?: SxProps;
   };
-
   autoUpdateDropdown?: boolean;
   onDataChange?: (rows: T[]) => void;
-
   actions?: Partial<Record<keyof typeof iconMap, (row: T) => void>>;
   footerRows?: readonly FooterRow[];
+  stickyHeader?: boolean;
+  maxHeight?: number | string;
+  showSrNo?: boolean;
+  srNoLabel?: string;
 }
 
 function buildExportData<T extends Record<string, unknown>>(
   rows: readonly T[],
-  columns: readonly Column<T>[]
-) {
-  return rows.map((row) =>
-    columns.reduce((acc, col) => {
-      if (col.key !== ACTION_KEY && col.exportable !== false) {
-        acc[col.label] = row[col.key];
-      }
-      return acc;
-    }, {} as Record<string, unknown>)
+  columns: readonly Column<T>[],
+): Record<string, unknown>[] {
+  return rows.map((row, idx) =>
+    columns.reduce(
+      (acc, col) => {
+        if (
+          col.key !== ACTION_KEY &&
+          col.key !== SR_NO_KEY &&
+          col.exportable !== false
+        ) {
+          acc[col.label] = row[col.key];
+        }
+        return acc;
+      },
+      { "Sr. No.": idx + 1 } as Record<string, unknown>,
+    ),
   );
 }
 
@@ -119,82 +140,119 @@ export function UniversalTable<T extends Record<string, unknown>>({
   footerRows = [],
   captionSx,
   headerSx,
-  rowHoverSx,
   paperSx,
-  highlightColor = "#ffff00",
-   loading = false,
+  highlightColor = "#ffeb3b",
+  loading = false,
+  emptyStateMessage = "No data available",
+  emptyStateIcon,
+  stickyHeader = false,
+  maxHeight = "auto",
+  showSrNo = true,
+  srNoLabel = "Sr No",
 }: UniversalTableProps<T>) {
+  const theme = useTheme();
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(
-    new Set()
+    new Set(),
   );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const resolveRowId = (row: T, index: number) =>
+  useEffect(() => {
+    setPage(0);
+  }, [search]);
+
+  const resolveRowId = (row: T, index: number): string | number =>
     getRowId ? getRowId(row, index) : index;
 
-  const highlightText = (text: string | number | null | undefined): ReactNode =>
-    !search || text == null
-      ? text
-      : text
-          .toString()
-          .split(new RegExp(`(${search})`, "gi"))
-          .map((part, i) =>
-            i % 2 ? (
-              <mark key={i} style={{ background: highlightColor }}>
-                {part}
-              </mark>
-            ) : (
-              part
-            )
-          );
+  const highlightText = (
+    text: string | number | null | undefined,
+  ): ReactNode => {
+    if (!search || text == null) return text;
+
+    const textString = text.toString();
+    const regex = new RegExp(
+      `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi",
+    );
+    const parts = textString.split(regex);
+
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <mark
+          key={i}
+          style={{
+            background: highlightColor,
+            color: theme.palette.mode === "dark" ? "#000" : "#1a1a1a",
+            padding: "2px 4px",
+            borderRadius: "4px",
+            fontWeight: 600,
+          }}
+        >
+          {part}
+        </mark>
+      ) : (
+        part
+      ),
+    );
+  };
 
   const DEFAULT_DROPDOWN_SX: SxProps = {
     width: 150,
-    bgcolor: "#1f2937",
-    color: "#ffffff",
+    bgcolor: alpha(theme.palette.background.paper, 0.9),
+    color: theme.palette.text.primary,
     fontWeight: 600,
     fontSize: 13,
     borderRadius: 2,
-    "& .MuiSelect-icon": { color: "#a9a2a2ff" },
+    "& .MuiSelect-icon": { color: theme.palette.text.secondary },
+    "&:hover": {
+      bgcolor: alpha(theme.palette.primary.main, 0.08),
+    },
   };
 
+  // Filter data based on search
   const filteredData = useMemo(() => {
     if (!search) return data;
 
     return data.filter((row) =>
       columns.some((col) => {
         if (col.key === ACTION_KEY) return false;
-
         const value = row[col.key];
         return String(value ?? "")
           .toLowerCase()
           .includes(search.toLowerCase());
-      })
+      }),
     );
   }, [data, columns, search]);
 
+  // Paginated data
   const paginatedData = useMemo(
     () =>
       filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [filteredData, page, rowsPerPage]
+    [filteredData, page, rowsPerPage],
   );
 
+  // Export data with Sr. No.
   const exportData = useMemo(
     () => buildExportData(filteredData, columns),
-    [filteredData, columns]
+    [filteredData, columns],
   );
 
-  const exportColumns = useMemo(
-    () =>
-      columns
-        .filter((c) => c.key !== ACTION_KEY && c.exportable !== false)
-        .map((c) => ({ key: c.label, label: c.label })),
-    [columns]
-  );
+  const exportColumns = useMemo(() => {
+    const cols = [{ key: "Sr. No.", label: "Sr. No." }];
+    columns
+      .filter(
+        (c) =>
+          c.key !== ACTION_KEY && c.key !== SR_NO_KEY && c.exportable !== false,
+      )
+      .forEach((c) => {
+        cols.push({ key: c.label, label: c.label });
+      });
+    return cols;
+  }, [columns]);
 
   const selectedRows = data.filter((_, i) =>
-    selectedIds.has(resolveRowId(_, i))
+    selectedIds.has(resolveRowId(_, i)),
   );
 
   const toggleRow = (row: T, index: number) => {
@@ -202,10 +260,10 @@ export function UniversalTable<T extends Record<string, unknown>>({
     const updated = new Set(selectedIds);
 
     if (updated.has(id)) {
-  updated.delete(id);
-} else {
-  updated.add(id);
-}
+      updated.delete(id);
+    } else {
+      updated.add(id);
+    }
 
     setSelectedIds(updated);
     onSelectionChange?.(data.filter((r, i) => updated.has(resolveRowId(r, i))));
@@ -220,287 +278,641 @@ export function UniversalTable<T extends Record<string, unknown>>({
 
   const updateRow = (row: T, patch: Partial<T>) => {
     if (!onDataChange) return;
-
     const targetId = resolveRowId(row, -1);
-
     onDataChange(
       data.map((r, i) =>
-        resolveRowId(r, i) === targetId ? { ...r, ...patch } : r
-      )
+        resolveRowId(r, i) === targetId ? { ...r, ...patch } : r,
+      ),
     );
   };
 
+  // Get global index for Sr. No.
+  const getGlobalIndex = (pageIndex: number): number => {
+    return page * rowsPerPage + pageIndex + 1;
+  };
+
+  // Prepare all columns including Sr. No.
+  const allColumns = useMemo(() => {
+    const cols = [...columns];
+    if (showSrNo) {
+      return [
+        {
+          key: SR_NO_KEY,
+          label: srNoLabel,
+          width: 70,
+          minWidth: 70,
+        } as Column<T>,
+        ...cols,
+      ];
+    }
+    return cols;
+  }, [columns, showSrNo, srNoLabel]);
+
   return (
-    <Paper sx={{ borderRadius: 3, boxShadow: 4, ...paperSx }}>
-      {(showSearch || showExport) && (
-        <Box
-          sx={{
-            px: {xs:1,sm:2},
-            py: 2,
-            display: "flex",
-            width: "100%",
-            justifyContent: {
-              xs: "center",
-              sm: showSearch ? "space-between" : "flex-end",
-            },
-            flexWrap: "wrap",
-            gap: 2,
-          }}
-        >
-          {showSearch && (
-            <TextField
-              variant="standard"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              sx={{ minWidth: 220 }}
-            />
-          )}
-
-          {showExport && (
-            <ExportIcons
-              data={exportData}
-              columns={exportColumns}
-              filename="Export"
-              iconSize={22}
-            />
-          )}
-        </Box>
-      )}
-
-      {caption && (
-        <Box
-          sx={{
-            bgcolor: "#0ca678",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: 18,
-            borderRadius: showSearch || showExport ? "" : "6px 6px 0 0",
-            textAlign: "center",
-            py: 1,
-            ...captionSx,
-          }}
-        >
-          {caption}
-        </Box>
-      )}
-
-      <TableContainer>
-        <Table size={tableSize}>
-          <TableHead>
-            <TableRow>
-              {enableCheckbox && paginatedData.length > 0 && (
-                <TableCell padding="checkbox" sx={{ bgcolor: "#444748ff" }}>
-                  <Checkbox
-                    indeterminate={
-                      selectedIds.size > 0 && selectedIds.size < data.length
-                    }
-                    checked={
-                      data.length > 0 && selectedIds.size === data.length
-                    }
-                    onChange={(e) => toggleAll(e.target.checked)}
-                    sx={{ color: "#fff" }}
-                  />
-                </TableCell>
-              )}
-
-              {columns.map((col) => (
-                <TableCell
-                  key={String(col.key)}
-                  align={textAlign}
-                  sx={{
-                    fontWeight: 700,
-                    bgcolor: "#444748ff",
-                    color: "#ffffff",
-                    ...headerSx,
-                  }}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-
-          <TableBody>
-            {loading ? (
-    <TableRow>
-      <TableCell colSpan={columns.length} align="center" sx={{ py: 8 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
-          <CircularProgress size={40} sx={{ color: "#1976d2" }} />
-          <Typography variant="body2" color="text.secondary">Loading records...</Typography>
-        </Box>
-      </TableCell>
-    </TableRow>
-  ) : paginatedData.length === 0 ? (
-    <TableRow>
-      <TableCell colSpan={columns.length} align="center" sx={{ py: 8 }}>
-        <Typography variant="body2" color="text.secondary">No data found</Typography>
-      </TableCell>
-    </TableRow>
-  ) : (
-              paginatedData.map((row, index) => {
-                const rowId = resolveRowId(row, index);
-
-                return (
-                  <TableRow
-                    key={rowId}
-                    hover
-                    sx={{ "&:hover": { bgcolor: "#e6f4ea" }, ...rowHoverSx }}
-                  >
-                    {enableCheckbox && (
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedIds.has(rowId)}
-                          onChange={() => toggleRow(row, index)}
-                        />
-                      </TableCell>
-                    )}
-
-                    {columns.map((col) => {
-                      /* Dropdown */
-                      if (
-                        dropdown &&
-                        col.key === dropdown.key &&
-                        col.key !== ACTION_KEY
-                      ) {
-                        return (
-                          <TableCell key={String(col.key)} align={textAlign}>
-                            <Select
-                              size="small"
-                              value={row[col.key] as string}
-                              sx={{
-                                ...DEFAULT_DROPDOWN_SX,
-                                bgcolor: DEFAULT_DROPDOWN_SX.bgcolor as string,
-                                color: DEFAULT_DROPDOWN_SX.color as string,
-                                width:
-                                  dropdown.width ??
-                                  (DEFAULT_DROPDOWN_SX.width as number),
-                                ...dropdown.sx,
-                              }}
-                              onChange={(e) => {
-                                const value = e.target.value as T[keyof T];
-                                dropdown.onChange?.(row, value);
-                                if (!dropdown.onChange && autoUpdateDropdown) {
-                                  updateRow(row, {
-                                    [dropdown.key]: value,
-                                  } as Partial<T>);
-                                }
-                              }}
-                            >
-                              {dropdown.options.map((o) => (
-                                <MenuItem key={o.value} value={o.value}>
-                                  {o.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </TableCell>
-                        );
-                      }
-
-                      /* Actions */
-                      if (col.key === ACTION_KEY && actions) {
-                        return (
-                          <TableCell key={ACTION_KEY}>
-                            <Box display="flex" gap={1}>
-                              {Object.entries(iconMap).map(([k, cfg]) =>
-                                actions[k as keyof typeof iconMap] ? (
-                                  <Tooltip key={k} title={cfg.label}>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() =>
-                                        actions[k as keyof typeof iconMap]?.(
-                                          row
-                                        )
-                                      }
-                                      sx={{ color: cfg.color }}
-                                    >
-                                      {cfg.icon}
-                                    </IconButton>
-                                  </Tooltip>
-                                ) : null
-                              )}
-                            </Box>
-                          </TableCell>
-                        );
-                      }
-
-                      /* Default */
-                      if (col.key === ACTION_KEY) return null;
-
-                      return (
-                        <TableCell key={String(col.key)} align={textAlign}>
-                          {col.render
-                            ? col.render(row)
-                            : highlightText(String(row[col.key] ?? ""))}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-
-          {footerRows.length > 0 && (
-            <TableFooter>
-              {footerRows.map((f, i) => (
-                <TableRow key={i}>
-                  {f.content.map((c, j) => (
-                    <TableCell key={j} colSpan={c.colSpan}>
-                      {c.value}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableFooter>
-          )}
-        </Table>
-      </TableContainer>
-
-      <Box
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Paper
+        elevation={0}
         sx={{
-          display: "flex",
-          justifyContent:
-            enableCheckbox && selectedRows.length > 0
-              ? "space-between"
-              : "flex-end",
-          px: 1,
+          borderRadius: 4,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
+          overflow: "hidden",
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          ...paperSx,
         }}
       >
-        {enableCheckbox && selectedRows.length > 0 && onDeleteSelected && (
-          <Tooltip
-            title={
-              selectedRows.length === data.length
-                ? "Delete All Records"
-                : `Delete ${selectedRows.length} record${
-                    selectedRows.length > 1 ? "s" : ""
-                  }`
-            }
+        {/* Header with Search and Export */}
+        {(showSearch || showExport) && (
+          <Box
+            sx={{
+              px: { xs: 1.5, sm: 3 },
+              py: 2,
+              display: "flex",
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 2,
+              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              background: alpha(theme.palette.background.default, 0.5),
+            }}
           >
-            <IconButton
-              color="error"
-              onClick={() => {
-                onDeleteSelected(selectedRows);
-                setSelectedIds(new Set());
-              }}
-            >
-              <IconTrashX size={20} />
-            </IconButton>
-          </Tooltip>
+            {showSearch && (
+              <TextField
+                inputRef={searchInputRef}
+                variant="outlined"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
+                size="small"
+                sx={{
+                  minWidth: { xs: "100%", sm: 260 },
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 3,
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.1)}`,
+                    },
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <IconSearch size={18} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
+
+            {showExport && exportData.length > 0 && (
+              <Zoom in={true} timeout={500}>
+                <Box>
+                  <ExportIcons
+                    data={exportData}
+                    columns={exportColumns}
+                    filename="Export"
+                    iconSize={22}
+                  />
+                </Box>
+              </Zoom>
+            )}
+          </Box>
         )}
 
-        <TablePagination
-          component="div"
-          count={filteredData.length}
-          page={page}
-          onPageChange={(_, p) => setPage(p)}
-          rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[]}
-        />
-      </Box>
-    </Paper>
+        {/* Caption */}
+        {caption && (
+          <motion.div
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Box
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: { xs: 16, sm: 18 },
+                borderRadius: "0px",
+                textAlign: "center",
+                py: 1.5,
+                px: 2,
+                ...captionSx,
+              }}
+            >
+              {caption}
+            </Box>
+          </motion.div>
+        )}
+
+        {/* Table Container with Horizontal Scroll on Mobile */}
+        <TableContainer
+          sx={{
+            maxHeight: maxHeight,
+            overflowX: "auto",
+            overflowY: "auto",
+            position: "relative",
+            // Enable horizontal scroll on all screen sizes
+            "&::-webkit-scrollbar": {
+              height: 8,
+              width: 8,
+            },
+            "&::-webkit-scrollbar-track": {
+              background: alpha(theme.palette.common.black, 0.05),
+              borderRadius: 4,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: alpha(theme.palette.primary.main, 0.3),
+              borderRadius: 4,
+              "&:hover": {
+                background: alpha(theme.palette.primary.main, 0.5),
+              },
+            },
+          }}
+        >
+          <Table
+            size={tableSize}
+            stickyHeader={stickyHeader}
+            sx={{
+              minWidth: { xs: 650, sm: 800, md: 900, lg: "100%" },
+              borderCollapse: "separate",
+              borderSpacing: "0",
+              tableLayout: "auto",
+            }}
+          >
+            <TableHead>
+              <TableRow>
+                {enableCheckbox && (
+                  <TableCell
+                    padding="checkbox"
+                    sx={{
+                      bgcolor: theme.palette.background.paper,
+                      borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                      position: stickyHeader ? "sticky" : "relative",
+                      top: 0,
+                      left: 0,
+                      zIndex: 3,
+                      width: 48,
+                    }}
+                  >
+                    <Checkbox
+                      indeterminate={
+                        selectedIds.size > 0 && selectedIds.size < data.length
+                      }
+                      checked={
+                        data.length > 0 && selectedIds.size === data.length
+                      }
+                      onChange={(e) => toggleAll(e.target.checked)}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        "&.Mui-checked": {
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    />
+                  </TableCell>
+                )}
+
+                {allColumns.map((col, idx) => (
+                  <TableCell
+                    key={String(col.key)}
+                    align={col.key === SR_NO_KEY ? "center" : textAlign}
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: { xs: 12, sm: 14 },
+                      bgcolor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                      whiteSpace: "nowrap",
+                      width: col.width || (col.key === SR_NO_KEY ? 70 : "auto"),
+                      minWidth:
+                        col.minWidth || (col.key === SR_NO_KEY ? 70 : 100),
+                      position: stickyHeader ? "sticky" : "relative",
+                      top: 0,
+                      zIndex: 2,
+                      ...headerSx,
+                    }}
+                  >
+                    <motion.span
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      {col.label}
+                    </motion.span>
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              <AnimatePresence mode="wait">
+                {loading ? (
+                  <motion.tr
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <TableCell
+                      colSpan={allColumns.length + (enableCheckbox ? 1 : 0)}
+                      align="center"
+                      sx={{ py: 12 }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 2,
+                        }}
+                      >
+                        <CircularProgress
+                          size={48}
+                          sx={{ color: theme.palette.primary.main }}
+                        />
+                        <Typography
+                          variant="body1"
+                          color="text.secondary"
+                          sx={{ fontWeight: 500 }}
+                        >
+                          Loading records...
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </motion.tr>
+                ) : paginatedData.length === 0 ? (
+                  <motion.tr
+                    key="empty"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <TableCell
+                      colSpan={allColumns.length + (enableCheckbox ? 1 : 0)}
+                      align="center"
+                      sx={{ py: 12 }}
+                    >
+                      <Fade in={true} timeout={800}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 2,
+                          }}
+                        >
+                          {emptyStateIcon || (
+                            <IconFilterOff
+                              size={64}
+                              style={{
+                                color: theme.palette.text.secondary,
+                                opacity: 0.5,
+                              }}
+                            />
+                          )}
+                          <Typography
+                            variant="h6"
+                            color="text.secondary"
+                            sx={{ fontWeight: 500 }}
+                          >
+                            {emptyStateMessage}
+                          </Typography>
+                          {search && (
+                            <Chip
+                              label={`No results for "${search}"`}
+                              onDelete={() => {
+                                setSearch("");
+                                searchInputRef.current?.focus();
+                              }}
+                              sx={{
+                                mt: 1,
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                color: theme.palette.primary.main,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Fade>
+                    </TableCell>
+                  </motion.tr>
+                ) : (
+                  paginatedData.map((row, index) => {
+                    const rowId = resolveRowId(row, index);
+                    const isSelected = selectedIds.has(rowId);
+                    const globalSrNo = getGlobalIndex(index);
+
+                    return (
+                      <motion.tr
+                        key={rowId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        style={{
+                          backgroundColor: isSelected
+                            ? alpha(theme.palette.primary.main, 0.08)
+                            : "transparent",
+                          transition: "all 0.3s ease",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = alpha(
+                            theme.palette.grey[200],
+                            0.6,
+                          );
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isSelected
+                            ? alpha(theme.palette.primary.main, 0.08)
+                            : "transparent";
+                        }}
+                      >
+                        {enableCheckbox && (
+                          <TableCell padding="checkbox" sx={{ width: 48 }}>
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={() => toggleRow(row, index)}
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                "&.Mui-checked": {
+                                  color: theme.palette.primary.main,
+                                },
+                              }}
+                            />
+                          </TableCell>
+                        )}
+
+                        {allColumns.map((col) => {
+                          // Sr. No. Column
+                          if (col.key === SR_NO_KEY) {
+                            return (
+                              <TableCell
+                                key={String(col.key)}
+                                align="center"
+                                sx={{
+                                  py: 1.5,
+                                  fontWeight: 600,
+                                  fontSize: { xs: 12, sm: 14 },
+                                  color: theme.palette.text.primary,
+                                  backgroundColor: alpha(
+                                    theme.palette.primary.main,
+                                    0.02,
+                                  ),
+                                  whiteSpace: "nowrap",
+                                  width: 70,
+                                }}
+                              >
+                                {globalSrNo}
+                              </TableCell>
+                            );
+                          }
+
+                          // Dropdown Column
+                          if (
+                            dropdown &&
+                            col.key === dropdown.key &&
+                            col.key !== ACTION_KEY
+                          ) {
+                            const isDisabled =
+                              typeof dropdown.disabled === "function"
+                                ? dropdown.disabled(row)
+                                : dropdown.disabled || false;
+
+                            return (
+                              <TableCell
+                                key={String(col.key)}
+                                align={textAlign}
+                                sx={{
+                                  py: 1.5,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                <Select
+                                  size="small"
+                                  value={row[col.key] as string}
+                                  disabled={isDisabled}
+                                  sx={{
+                                    ...DEFAULT_DROPDOWN_SX,
+                                    width: dropdown.width ?? 150,
+                                    ...dropdown.sx,
+                                  }}
+                                  onChange={(e) => {
+                                    const value = e.target.value as T[keyof T];
+                                    dropdown.onChange?.(row, value);
+                                    if (
+                                      !dropdown.onChange &&
+                                      autoUpdateDropdown
+                                    ) {
+                                      updateRow(row, {
+                                        [dropdown.key]: value,
+                                      } as Partial<T>);
+                                    }
+                                  }}
+                                >
+                                  {dropdown.options.map((option) => (
+                                    <MenuItem
+                                      key={option.value}
+                                      value={option.value}
+                                      sx={{
+                                        bgcolor:
+                                          option.bgColor || "transparent",
+                                        color: option.textColor || "inherit",
+                                      }}
+                                    >
+                                      {option.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </TableCell>
+                            );
+                          }
+
+                          // Actions Column
+                          if (col.key === ACTION_KEY && actions) {
+                            return (
+                              <TableCell
+                                key={ACTION_KEY}
+                                align="center"
+                                sx={{ whiteSpace: "nowrap", py: 1 }}
+                              >
+                                <Box
+                                  display="flex"
+                                  gap={0.5}
+                                  justifyContent="center"
+                                >
+                                  {Object.entries(iconMap).map(([k, cfg]) =>
+                                    actions[k as keyof typeof iconMap] ? (
+                                      <Tooltip
+                                        key={k}
+                                        title={cfg.label}
+                                        arrow
+                                        placement="top"
+                                      >
+                                        <motion.div
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.95 }}
+                                        >
+                                          <IconButton
+                                            size="small"
+                                            onClick={() =>
+                                              actions[
+                                                k as keyof typeof iconMap
+                                              ]?.(row)
+                                            }
+                                            sx={{
+                                              color: cfg.color,
+                                              transition: "all 0.2s ease",
+                                              "&:hover": {
+                                                bgcolor: alpha(cfg.color, 0.1),
+                                              },
+                                            }}
+                                          >
+                                            {cfg.icon}
+                                          </IconButton>
+                                        </motion.div>
+                                      </Tooltip>
+                                    ) : null,
+                                  )}
+                                </Box>
+                              </TableCell>
+                            );
+                          }
+
+                          // Default Column
+                          if (col.key === ACTION_KEY) return null;
+
+                          return (
+                            <TableCell
+                              key={String(col.key)}
+                              align={textAlign}
+                              sx={{
+                                py: 1.5,
+                                fontSize: { xs: 12, sm: 14 },
+                                whiteSpace: "nowrap",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              {col.render
+                                ? col.render(row, index)
+                                : highlightText(String(row[col.key] ?? ""))}
+                            </TableCell>
+                          );
+                        })}
+                      </motion.tr>
+                    );
+                  })
+                )}
+              </AnimatePresence>
+            </TableBody>
+
+            {footerRows.length > 0 && (
+              <TableFooter>
+                {footerRows.map((footerRow, idx) => (
+                  <TableRow key={idx}>
+                    {footerRow.content.map((cell, cellIdx) => (
+                      <TableCell
+                        key={cellIdx}
+                        colSpan={cell.colSpan}
+                        sx={{
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          fontWeight: 600,
+                          borderTop: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                        }}
+                      >
+                        {cell.value}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableFooter>
+            )}
+          </Table>
+        </TableContainer>
+
+        {/* Footer with Pagination */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent:
+              enableCheckbox && selectedRows.length > 0
+                ? "space-between"
+                : "flex-end",
+            alignItems: "center",
+            px: { xs: 1, sm: 2 },
+            py: 1,
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            bgcolor: alpha(theme.palette.background.default, 0.3),
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          {enableCheckbox && selectedRows.length > 0 && onDeleteSelected && (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <Tooltip
+                title={
+                  selectedRows.length === data.length
+                    ? "Delete All Records"
+                    : `Delete ${selectedRows.length} record${
+                        selectedRows.length > 1 ? "s" : ""
+                      }`
+                }
+                arrow
+              >
+                <IconButton
+                  color="error"
+                  onClick={() => {
+                    onDeleteSelected(selectedRows);
+                    setSelectedIds(new Set());
+                  }}
+                  sx={{
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      transform: "scale(1.05)",
+                      bgcolor: alpha(theme.palette.error.main, 0.1),
+                    },
+                  }}
+                >
+                  <IconTrashX size={20} />
+                </IconButton>
+              </Tooltip>
+            </motion.div>
+          )}
+
+          <TablePagination
+            component="div"
+            count={filteredData.length}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[]}
+            sx={{
+              border: "none",
+              "& .MuiTablePagination-displayedRows": {
+                fontSize: { xs: 11, sm: 13 },
+              },
+              "& .MuiIconButton-root": {
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  transform: "scale(1.1)",
+                },
+              },
+            }}
+          />
+        </Box>
+      </Paper>
+    </motion.div>
   );
 }

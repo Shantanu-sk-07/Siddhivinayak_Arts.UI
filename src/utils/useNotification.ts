@@ -1,4 +1,3 @@
-// src/hooks/useNotification.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { showSnackbar, showToast, showConfirmation } from '@/components/uncontrolled/ToastMessage';
 import { MessageType } from '@/components/uncontrolled/ToastMessage';
@@ -20,15 +19,6 @@ export interface NotificationState {
   isSubscribed: boolean;
 }
 
-export interface WebPushSubscription {
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
-  };
-}
-
-// Custom event type for notifications
 interface CustomNotificationEvent {
   id: string;
   type: 'booking' | 'payment' | 'system' | 'reminder';
@@ -49,7 +39,6 @@ export const useNotification = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Send browser notification - defined first to avoid hoisting issues
   const sendBrowserNotification = useCallback((options: NotificationOptions) => {
     if (!state.isSupported || state.permission !== 'granted') return;
 
@@ -79,7 +68,6 @@ export const useNotification = () => {
     return notification;
   }, [state.isSupported, state.permission]);
 
-  // Handle notification click based on type
   const handleNotificationClick = useCallback((notification: CustomNotificationEvent) => {
     switch (notification.type) {
       case 'booking':
@@ -98,11 +86,9 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Handle incoming notifications
   const handleIncomingNotification = useCallback((notification: CustomNotificationEvent) => {
     setUnreadCount(prev => prev + 1);
     
-    // Show toast for critical notifications
     let toastType: MessageType = 'info';
     if (notification.type === 'payment') {
       toastType = 'success';
@@ -112,10 +98,8 @@ export const useNotification = () => {
       toastType = 'info';
     }
     
-    // Use showToast with MessageType as first parameter
     showToast(toastType, notification.message, { autoClose: 5000 });
 
-    // Trigger browser notification if permission granted
     if (state.permission === 'granted') {
       sendBrowserNotification({
         title: notification.title,
@@ -127,19 +111,28 @@ export const useNotification = () => {
       });
     }
 
-    // Notify all listeners
     notificationListeners.current.forEach(listener => {
       listener(notification);
     });
   }, [state.permission, sendBrowserNotification, handleNotificationClick]);
 
-  // Setup WebSocket for real-time notifications
   const setupWebSocketConnection = useCallback(() => {
-    const token = localStorage.getItem('auth-storage');
+    const auth = localStorage.getItem('auth-storage');
+    let token = '';
+    if (auth) {
+      try {
+        const parsed = JSON.parse(auth);
+        token = parsed.state?.token || parsed.token;
+      } catch {
+        token = '';
+      }
+    }
+    
     if (!token) return;
 
     try {
-      const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8080/ws';
+      // Use import.meta.env instead of process.env for Vite
+      const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
       wsRef.current = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
 
       wsRef.current.onopen = () => {
@@ -160,7 +153,6 @@ export const useNotification = () => {
       };
 
       wsRef.current.onclose = () => {
-        // Attempt to reconnect after 5 seconds
         if (reconnectTimeout.current) {
           clearTimeout(reconnectTimeout.current);
         }
@@ -173,7 +165,6 @@ export const useNotification = () => {
     }
   }, [handleIncomingNotification]);
 
-  // Check if browser supports notifications
   useEffect(() => {
     const isSupported = 'Notification' in window;
     setState(prev => ({ ...prev, isSupported }));
@@ -182,7 +173,6 @@ export const useNotification = () => {
       setState(prev => ({ ...prev, permission: Notification.permission }));
     }
 
-    // Set up WebSocket connection for real-time notifications
     if (isSupported) {
       setupWebSocketConnection();
     }
@@ -197,7 +187,6 @@ export const useNotification = () => {
     };
   }, [setupWebSocketConnection]);
 
-  // Register for push notifications
   const registerPushNotifications = useCallback(async () => {
     if (!state.isSupported || state.permission !== 'granted') return;
 
@@ -205,10 +194,9 @@ export const useNotification = () => {
       const registration = await navigator.serviceWorker.register('/sw.js');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: process.env.REACT_APP_VAPID_PUBLIC_KEY,
+        applicationServerKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
       });
 
-      // Send subscription to backend
       await fetch('/api/notifications/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,7 +209,6 @@ export const useNotification = () => {
     }
   }, [state.isSupported, state.permission]);
 
-  // Request permission for browser notifications
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!state.isSupported) {
       showSnackbar('warning', 'Your browser does not support notifications');
@@ -243,8 +230,6 @@ export const useNotification = () => {
       
       if (permission === 'granted') {
         showSnackbar('success', 'Notifications enabled');
-        
-        // Register for push notifications
         await registerPushNotifications();
         return true;
       } else {
@@ -257,12 +242,10 @@ export const useNotification = () => {
     }
   }, [state.isSupported, state.permission, registerPushNotifications]);
 
-  // Send toast notification (in-app)
   const sendToast = useCallback((type: MessageType, message: string, duration?: number) => {
     showToast(type, message, { autoClose: duration });
   }, []);
 
-  // Send success notification
   const sendSuccess = useCallback((message: string, options?: { title?: string; duration?: number }) => {
     showSnackbar('success', message, options?.duration);
     
@@ -275,7 +258,6 @@ export const useNotification = () => {
     }
   }, [state.permission, sendBrowserNotification]);
 
-  // Send error notification
   const sendError = useCallback((message: string, options?: { title?: string; duration?: number }) => {
     showSnackbar('error', message, options?.duration);
     
@@ -289,7 +271,6 @@ export const useNotification = () => {
     }
   }, [state.permission, sendBrowserNotification]);
 
-  // Send warning notification
   const sendWarning = useCallback((message: string, options?: { title?: string; duration?: number }) => {
     showSnackbar('warning', message, options?.duration);
     
@@ -303,7 +284,6 @@ export const useNotification = () => {
     }
   }, [state.permission, sendBrowserNotification]);
 
-  // Send info notification
   const sendInfo = useCallback((message: string, options?: { title?: string; duration?: number }) => {
     showSnackbar('info', message, options?.duration);
     
@@ -316,7 +296,6 @@ export const useNotification = () => {
     }
   }, [state.permission, sendBrowserNotification]);
 
-  // Show confirmation dialog
   const confirm = useCallback(async (
     message: string,
     title?: string,
@@ -325,7 +304,6 @@ export const useNotification = () => {
     return showConfirmation(message, title, onConfirm);
   }, []);
 
-  // Fetch unread notifications count
   const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications/unread-count');
@@ -338,7 +316,6 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
@@ -353,7 +330,6 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications/mark-all-read', {
@@ -369,7 +345,6 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Send notification to specific user (admin only)
   const sendToUser = useCallback(async (userId: string, title: string, message: string, type: string) => {
     try {
       const response = await fetch('/api/notifications/send', {
@@ -388,7 +363,6 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Broadcast notification to all users (admin only)
   const broadcast = useCallback(async (title: string, message: string, type: string, roles?: string[]) => {
     try {
       const response = await fetch('/api/notifications/broadcast', {
@@ -407,7 +381,6 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Send booking reminder
   const sendBookingReminder = useCallback(async (bookingId: string) => {
     try {
       const response = await fetch(`/api/notifications/booking-reminder/${bookingId}`, {
@@ -424,7 +397,6 @@ export const useNotification = () => {
     }
   }, []);
 
-  // Add notification listener
   const addListener = useCallback((listener: (notification: CustomNotificationEvent) => void) => {
     notificationListeners.current.add(listener);
     return () => {
@@ -432,23 +404,19 @@ export const useNotification = () => {
     };
   }, []);
 
-  // Clear unread count
   const clearUnreadCount = useCallback(() => {
     setUnreadCount(0);
   }, []);
 
   return {
-    // State
     isSupported: state.isSupported,
     permission: state.permission,
     isSubscribed: state.isSubscribed,
     unreadCount,
     
-    // Permission methods
     requestPermission,
     registerPushNotifications,
     
-    // Notification sending methods
     sendBrowserNotification,
     sendToast,
     sendSuccess,
@@ -457,29 +425,24 @@ export const useNotification = () => {
     sendInfo,
     confirm,
     
-    // Management methods
     fetchUnreadCount,
     markAsRead,
     markAllAsRead,
     clearUnreadCount,
     
-    // Admin methods
     sendToUser,
     broadcast,
     sendBookingReminder,
     
-    // Event handling
     addListener,
   };
 };
 
-// Custom hook for booking-specific notifications
 export const useBookingNotification = () => {
   const notification = useNotification();
 
   const notifyBookingRequest = useCallback((customerName: string, ganpatiName: string) => {
-    const messageType: MessageType = 'info';
-    notification.sendToast(messageType, `New booking request from ${customerName} for ${ganpatiName}`);
+    notification.sendToast('info', `New booking request from ${customerName} for ${ganpatiName}`);
     
     notification.sendBrowserNotification({
       title: 'New Booking Request',
@@ -548,7 +511,6 @@ export const useBookingNotification = () => {
   };
 };
 
-// Custom hook for system notifications
 export const useSystemNotification = () => {
   const notification = useNotification();
 

@@ -19,9 +19,10 @@ import {
   EmojiEvents,
 } from '@mui/icons-material';
 import { useAuth } from '@/utils/useAuth';
-import { Booking } from '@/types';
 import { showSnackbar } from '@/components/uncontrolled/ToastMessage';
 import { useNavigate } from 'react-router-dom';
+import { customerService } from '@/services/CustomerService';
+import { BookingResponseDto } from '@/types';
 
 interface BookingSummary {
   activeBookings: number;
@@ -30,32 +31,11 @@ interface BookingSummary {
   pendingAmount: number;
 }
 
-interface BookingsResponse {
-  success: boolean;
-  data: Booking[];
-}
-
-interface SummaryResponse {
-  success: boolean;
-  data: BookingSummary;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-}
-
 export default function CustomerDashboard() {
-  const { user } = useAuth() as AuthContextType;
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
-  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [recentBookings, setRecentBookings] = useState<BookingResponseDto[]>([]);
   const [summary, setSummary] = useState<BookingSummary>({
     activeBookings: 0,
     completedBookings: 0,
@@ -70,18 +50,16 @@ export default function CustomerDashboard() {
   const fetchCustomerData = async (): Promise<void> => {
     try {
       setLoading(true);
-      // API calls
-      const bookingsResponse = await fetch('/api/customer/bookings?limit=5');
-      const summaryResponse = await fetch('/api/customer/summary');
+      const [bookingsRes, summaryRes] = await Promise.all([
+        customerService.getMyBookings(),
+        customerService.getCustomerSummary(),
+      ]);
       
-      const bookingsData: BookingsResponse = await bookingsResponse.json();
-      const summaryData: SummaryResponse = await summaryResponse.json();
-      
-      if (bookingsData.success && bookingsData.data) {
-        setRecentBookings(bookingsData.data);
+      if (bookingsRes.success && bookingsRes.data) {
+        setRecentBookings(bookingsRes.data);
       }
-      if (summaryData.success && summaryData.data) {
-        setSummary(summaryData.data);
+      if (summaryRes.success && summaryRes.data) {
+        setSummary(summaryRes.data);
       }
     } catch {
       showSnackbar('error', 'Failed to fetch dashboard data');
@@ -183,7 +161,7 @@ export default function CustomerDashboard() {
           </Box>
         ) : (
           <Grid container spacing={2}>
-            {recentBookings.map((booking: Booking) => (
+            {recentBookings.map((booking) => (
               <Grid size={12} key={booking.id}>
                 <Card variant="outlined">
                   <CardContent>

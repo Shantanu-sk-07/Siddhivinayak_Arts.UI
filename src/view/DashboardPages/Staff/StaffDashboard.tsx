@@ -1,298 +1,177 @@
-// src/view/DashboardPages/Staff/StaffDashboard.tsx
-import { useState, useEffect, JSX } from 'react';
-import {
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  LinearProgress,
-  TextField,
-  Button,
-  Chip,
-} from '@mui/material';
-import {
-  QrCodeScanner,
-  CheckCircle,
-  Search,
-  VerifiedUser,
-} from '@mui/icons-material';
-import { Booking } from '@/types';
+import { useState, useEffect } from 'react';
+import { Grid, Paper, Typography, Box, Card, CardContent, LinearProgress, TextField, Button, Chip, useTheme, alpha, styled, Avatar, InputAdornment } from '@mui/material';
+import { QrCodeScanner, CheckCircle, Search, VerifiedUser, Person, Phone } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastMessage';
-import { UniversalTable, Column } from '@/components/uncontrolled/UniversalTable';
+import { UniversalTable, Column, ACTION_KEY } from '@/components/uncontrolled/UniversalTable';
 import { useAuth } from '@/utils/useAuth';
+import { staffService } from '@/services/StaffService';
+import { BookingResponseDto } from '@/types';
 
-// Convert Booking to Record<string, unknown> type
-type BookingRecord = Booking & Record<string, unknown>;
+type BookingRecord = BookingResponseDto & Record<string, unknown>;
 
-interface StaffUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+const StyledCard = styled(Card)(({ theme }) => ({
+  background: alpha(theme.palette.common.white, 0.92),
+  backdropFilter: 'blur(10px)',
+  borderRadius: 20,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+  transition: 'all 0.3s ease-in-out',
+  cursor: 'pointer',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: `0 20px 40px ${alpha(theme.palette.common.black, 0.12)}`,
+  }
+}));
 
-interface AuthContextType {
-  user: StaffUser | null;
-}
-
-interface TodaysPickupsResponse {
-  success: boolean;
-  data: Booking[];
-}
-
-interface SearchBookingResponse {
-  success: boolean;
-  data: Booking | null;
-}
-
-interface VerifyPaymentResponse {
-  success: boolean;
-  message?: string;
-}
-
-interface CompletePickupResponse {
-  success: boolean;
-  message?: string;
-}
+const GlassPaper = styled(Paper)(({ theme }) => ({
+  background: alpha(theme.palette.common.white, 0.92),
+  backdropFilter: 'blur(10px)',
+  borderRadius: 20,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  overflow: 'hidden',
+  padding: theme.spacing(3),
+}));
 
 export default function StaffDashboard() {
-  const { user } = useAuth() as AuthContextType;
+  const theme = useTheme();
+  const { user } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
-  const [todaysPickups, setTodaysPickups] = useState<Booking[]>([]);
+  const [todaysPickups, setTodaysPickups] = useState<BookingResponseDto[]>([]);
   const [searchPhone, setSearchPhone] = useState<string>('');
-  const [searchResult, setSearchResult] = useState<Booking | null>(null);
+  const [searchResult, setSearchResult] = useState<BookingResponseDto | null>(null);
 
-  useEffect(() => {
-    fetchTodaysPickups();
-  }, []);
+  useEffect(() => { fetchTodaysPickups(); }, []);
 
   const fetchTodaysPickups = async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await fetch('/api/staff/todays-pickups');
-      const data: TodaysPickupsResponse = await response.json();
-      if (data.success && data.data) {
-        setTodaysPickups(data.data);
-      }
-    } catch {
-      showSnackbar('error', 'Failed to fetch pickups');
-    } finally {
-      setLoading(false);
-    }
+      const response = await staffService.getTodaysPickups();
+      if (response.success && response.data) setTodaysPickups(response.data);
+    } catch { showSnackbar('error', 'Failed to fetch pickups'); }
+    finally { setLoading(false); }
   };
 
   const handleSearchBooking = async (): Promise<void> => {
-    if (!searchPhone) {
-      showSnackbar('warning', 'Please enter mobile number');
-      return;
-    }
+    if (!searchPhone) { showSnackbar('warning', 'Please enter mobile number'); return; }
     try {
-      const response = await fetch(`/api/staff/search-booking?phone=${searchPhone}`);
-      const data: SearchBookingResponse = await response.json();
-      if (data.success && data.data) {
-        setSearchResult(data.data);
-      } else {
-        showSnackbar('error', 'No booking found for this number');
-        setSearchResult(null);
-      }
-    } catch {
-      showSnackbar('error', 'Search failed');
-    }
+      const response = await staffService.searchBookingByPhone(searchPhone);
+      if (response.success && response.data?.booking) setSearchResult(response.data.booking);
+      else { showSnackbar('error', 'No booking found for this number'); setSearchResult(null); }
+    } catch { showSnackbar('error', 'Search failed'); }
   };
 
   const handleVerifyPayment = async (bookingId: string): Promise<void> => {
-    const confirmed = await showConfirmation({
-      message: 'Confirm payment verification?',
-      title: 'Verify Payment',
-      confirmText: 'Verify',
-      confirmColor: 'success',
-    });
-    
+    const confirmed = await showConfirmation('Confirm payment verification?', 'Verify Payment', async () => {});
     if (confirmed) {
       try {
-        const response = await fetch(`/api/staff/verify-payment/${bookingId}`, {
-          method: 'POST',
-        });
-        const data: VerifyPaymentResponse = await response.json();
-        if (data.success) {
+        const response = await staffService.verifyPayment(bookingId);
+        if (response.success) {
           showSnackbar('success', 'Payment verified successfully');
           await fetchTodaysPickups();
           setSearchResult(null);
           setSearchPhone('');
         }
-      } catch {
-        showSnackbar('error', 'Verification failed');
-      }
+      } catch { showSnackbar('error', 'Verification failed'); }
     }
   };
 
   const handleCompletePickup = async (bookingId: string): Promise<void> => {
-    const confirmed = await showConfirmation({
-      message: 'Confirm pickup completion?',
-      title: 'Complete Pickup',
-      confirmText: 'Complete',
-      confirmColor: 'success',
-    });
-    
+    const confirmed = await showConfirmation('Confirm pickup completion?', 'Complete Pickup', async () => {});
     if (confirmed) {
       try {
-        const response = await fetch(`/api/staff/complete-pickup/${bookingId}`, {
-          method: 'POST',
-        });
-        const data: CompletePickupResponse = await response.json();
-        if (data.success) {
+        const response = await staffService.completePickup(bookingId);
+        if (response.success) {
           showSnackbar('success', 'Pickup completed successfully');
           await fetchTodaysPickups();
           setSearchResult(null);
           setSearchPhone('');
         }
-      } catch {
-        showSnackbar('error', 'Failed to complete pickup');
-      }
+      } catch { showSnackbar('error', 'Failed to complete pickup'); }
     }
   };
 
-  // Define columns for UniversalTable using BookingRecord type
   const columns: Column<BookingRecord>[] = [
-    { key: 'bookingId' as keyof BookingRecord, label: 'Booking ID' },
-    { key: 'customerName' as keyof BookingRecord, label: 'Customer Name' },
-    { key: 'customerPhone' as keyof BookingRecord, label: 'Phone' },
-    { key: 'ganpatiName' as keyof BookingRecord, label: 'Ganpati' },
-    { 
-      key: 'remainingAmount' as keyof BookingRecord, 
-      label: 'Pending Amount', 
-      render: (row: BookingRecord): string => `₹${(row as Booking).remainingAmount.toLocaleString()}` 
-    },
-    { 
-      key: 'status' as keyof BookingRecord, 
-      label: 'Status', 
-      render: (row: BookingRecord): JSX.Element => {
-        const booking = row as Booking;
-        return (
-          <Chip 
-            label={booking.status.replace('_', ' ')} 
-            color={booking.status === 'CONFIRMED' ? 'success' : 'warning'}
-            size="small"
-          />
-        );
-      }
-    },
+    { key: 'bookingId', label: 'Booking ID' },
+    { key: 'customerName', label: 'Customer Name' },
+    { key: 'customerPhone', label: 'Phone' },
+    { key: 'ganpatiName', label: 'Ganpati' },
+    { key: 'remainingAmount', label: 'Pending Amount', render: (row) => `₹${(row as BookingResponseDto).remainingAmount.toLocaleString()}` },
+    { key: 'status', label: 'Status', render: (row) => <Chip label={(row as BookingResponseDto).status.replace('_', ' ')} color={(row as BookingResponseDto).status === 'CONFIRMED' ? 'success' : 'warning'} size="small" sx={{ borderRadius: 8 }} /> },
+    { key: ACTION_KEY, label: 'Actions' },
   ];
 
   if (loading) return <LinearProgress />;
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-        Staff Dashboard - {user?.name}
-      </Typography>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
+        <Box mb={3}>
+          <Typography variant="h4" sx={{ fontWeight: 700, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent' }}>
+            Staff Dashboard - {user?.name}
+          </Typography>
+        </Box>
 
-      <Grid container spacing={3}>
-        <Grid size={{xs: 12, sm: 6}}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1}>
-              <Search /> Quick Search by Mobile Number
-            </Typography>
-            <Box display="flex" gap={2} mt={2}>
-              <TextField
-                fullWidth
-                label="Mobile Number"
-                value={searchPhone}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchPhone(e.target.value)}
-                placeholder="Enter 10-digit mobile number"
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <GlassPaper>
+              <Typography variant="h6" fontWeight={600} gutterBottom display="flex" alignItems="center" gap={1}><Search /> Quick Search by Mobile Number</Typography>
+              <Box display="flex" gap={2} mt={2} flexWrap="wrap">
+                <TextField fullWidth label="Mobile Number" value={searchPhone} onChange={(e) => setSearchPhone(e.target.value)} placeholder="Enter 10-digit mobile number" InputProps={{ startAdornment: (<InputAdornment position="start"><Phone /></InputAdornment>) }} sx={{ flex: 1 }} />
+                <Button variant="contained" onClick={handleSearchBooking} sx={{ borderRadius: 30, textTransform: 'none' }}>Search</Button>
+              </Box>
+              {searchResult && (
+                <StyledCard sx={{ mt: 3 }}>
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" alignItems="start" flexWrap="wrap" gap={2}>
+                      <Box>
+                        <Box display="flex" alignItems="center" gap={2} mb={1}>
+                          <Avatar sx={{ bgcolor: theme.palette.primary.main }}><Person /></Avatar>
+                          <Box><Typography variant="subtitle1" fontWeight={600}>{searchResult.customerName}</Typography><Typography variant="caption" color="textSecondary">Booking ID: {searchResult.bookingId}</Typography></Box>
+                        </Box>
+                        <Typography variant="body2">Ganpati: {searchResult.ganpatiName}</Typography>
+                        <Typography variant="body2">Total: ₹{searchResult.totalAmount.toLocaleString()}</Typography>
+                        <Typography variant="body2">Paid: ₹{searchResult.advancePaid.toLocaleString()}</Typography>
+                        <Typography variant="body2" fontWeight={600} color={searchResult.remainingAmount > 0 ? 'error.main' : 'success.main'}>Remaining: ₹{searchResult.remainingAmount.toLocaleString()}</Typography>
+                      </Box>
+                      <Box><Chip label={searchResult.status.replace('_', ' ')} color={searchResult.status === 'CONFIRMED' ? 'success' : 'warning'} sx={{ borderRadius: 8 }} /></Box>
+                    </Box>
+                    <Box display="flex" gap={2} mt={2} flexWrap="wrap">
+                      {searchResult.remainingAmount > 0 && searchResult.status === 'CONFIRMED' && (<Button variant="contained" color="success" startIcon={<VerifiedUser />} onClick={() => handleVerifyPayment(searchResult.id)} sx={{ borderRadius: 30, textTransform: 'none' }}>Verify Payment</Button>)}
+                      {searchResult.status === 'CONFIRMED' && searchResult.remainingAmount === 0 && (<Button variant="contained" startIcon={<CheckCircle />} onClick={() => handleCompletePickup(searchResult.id)} sx={{ borderRadius: 30, textTransform: 'none' }}>Complete Pickup</Button>)}
+                    </Box>
+                  </CardContent>
+                </StyledCard>
+              )}
+            </GlassPaper>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <GlassPaper>
+              <Typography variant="h6" fontWeight={600} gutterBottom display="flex" alignItems="center" gap={1}><QrCodeScanner /> QR Scanner</Typography>
+              <Box sx={{ height: 300, bgcolor: '#000', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography color="white">QR Scanner Component Here</Typography>
+              </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>Position QR code in front of camera to scan</Typography>
+            </GlassPaper>
+          </Grid>
+
+          <Grid size={12}>
+            <GlassPaper>
+              <Typography variant="h6" fontWeight={600} gutterBottom>Today's Pickups Schedule</Typography>
+              <UniversalTable<BookingRecord>
+                data={todaysPickups as BookingRecord[]}
+                columns={columns}
+                rowsPerPage={10}
+                showSearch
+                actions={{
+                  view: (row) => console.log('View', row),
+                  complete: (row) => (row as BookingResponseDto).status === 'CONFIRMED' && (row as BookingResponseDto).remainingAmount === 0 ? handleCompletePickup((row as BookingResponseDto).id) : undefined,
+                }}
               />
-              <Button variant="contained" onClick={handleSearchBooking}>
-                Search
-              </Button>
-            </Box>
-
-            {searchResult && (
-              <Card sx={{ mt: 3, bgcolor: 'action.hover' }}>
-                <CardContent>
-                  <Box display="flex" justifyContent="space-between" alignItems="start">
-                    <Box>
-                      <Typography variant="subtitle1" fontWeight={600}>{searchResult.customerName}</Typography>
-                      <Typography variant="body2">Booking ID: {searchResult.bookingId}</Typography>
-                      <Typography variant="body2">Ganpati: {searchResult.ganpatiName}</Typography>
-                      <Typography variant="body2">Total: ₹{searchResult.totalAmount.toLocaleString()}</Typography>
-                      <Typography variant="body2">Paid: ₹{searchResult.advancePaid.toLocaleString()}</Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        Remaining: ₹{searchResult.remainingAmount.toLocaleString()}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Chip 
-                        label={searchResult.status.replace('_', ' ')} 
-                        color={searchResult.status === 'CONFIRMED' ? 'success' : 'warning'}
-                      />
-                    </Box>
-                  </Box>
-                  
-                  <Box display="flex" gap={2} mt={2}>
-                    {searchResult.remainingAmount > 0 && searchResult.status === 'CONFIRMED' && (
-                      <Button 
-                        variant="contained" 
-                        color="success"
-                        startIcon={<VerifiedUser />}
-                        onClick={() => handleVerifyPayment(searchResult.id)}
-                      >
-                        Verify Payment
-                      </Button>
-                    )}
-                    {searchResult.status === 'CONFIRMED' && searchResult.remainingAmount === 0 && (
-                      <Button 
-                        variant="contained" 
-                        color="primary"
-                        startIcon={<CheckCircle />}
-                        onClick={() => handleCompletePickup(searchResult.id)}
-                      >
-                        Complete Pickup
-                      </Button>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-            )}
-          </Paper>
+            </GlassPaper>
+          </Grid>
         </Grid>
-
-        <Grid size={{xs: 12, sm: 6}}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1}>
-              <QrCodeScanner /> QR Scanner
-            </Typography>
-            <Box 
-              sx={{ 
-                height: 300, 
-                bgcolor: 'black', 
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography color="white">QR Scanner Component Here</Typography>
-            </Box>
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
-              Position QR code in front of camera to scan
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid size={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Today's Pickups Schedule</Typography>
-            <UniversalTable<BookingRecord>
-              data={todaysPickups as BookingRecord[]}
-              columns={columns}
-              rowsPerPage={10}
-              showSearch
-            />
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+      </Box>
+    </motion.div>
   );
 }

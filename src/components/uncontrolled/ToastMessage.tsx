@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { toast, ToastContainer, type ToastOptions, type ToastContainerProps } from "react-toastify";
-import { Dialog, DialogContent, DialogActions, Button, Typography, Snackbar, Alert, CircularProgress, Box} from "@mui/material";
+import { Dialog, DialogContent, DialogActions, Button, Typography, Snackbar, Alert, CircularProgress, Box } from "@mui/material";
 import "react-toastify/dist/ReactToastify.css";
 
 export type MessageType = "success" | "error" | "warning" | "info";
@@ -14,6 +14,9 @@ export interface ConfirmationOptions {
   confirmColor?: "primary" | "secondary" | "error" | "success" | "warning";
   icon?: string;
   description?: string;
+  showPrice?: boolean;
+  price?: number;
+  advancePercent?: number;
   onConfirm?: () => Promise<void> | void;
   onCancel?: () => void;
 }
@@ -48,7 +51,7 @@ const ensureSnackbarRoot = () => {
   }
 };
 
-export const showSnackbar = ( severity: MessageType = "info", message: string,duration: number = 3000) => {
+export const showSnackbar = (severity: MessageType = "info", message: string, duration: number = 3000) => {
   ensureSnackbarRoot();
 
   const Container = () => {
@@ -70,7 +73,7 @@ export const showSnackbar = ( severity: MessageType = "info", message: string,du
   snackbarRoot!.render(<Container />);
 };
 
-// ---------------- Confirmation Dialog ----------------
+// ---------------- Confirmation Dialog (Reusable with customization) ----------------
 let confirmRoot: Root | null = null;
 const ensureConfirmRoot = () => {
   if (!confirmRoot) {
@@ -83,29 +86,28 @@ export const showConfirmation = (
   title?: string,
   onConfirm?: () => Promise<void>
 ): Promise<boolean> => {
-  // Handle both old and new calling patterns
   let options: ConfirmationOptions;
   
   if (typeof messageOrOptions === 'string') {
-    // Old pattern: showConfirmation(message, title, onConfirm)
     options = {
       message: messageOrOptions,
-      title: title || "Confirm Deletion",
-      confirmText: "Delete",
+      title: title || "Confirm Action",
+      confirmText: "Confirm",
       cancelText: "Cancel",
-      confirmColor: "error",
-      icon: "🗑️",
-      description: "This action cannot be undone",
+      confirmColor: "primary",
+      icon: "⚠️",
+      description: "",
+      showPrice: false,
       onConfirm: onConfirm,
     };
   } else {
-    // New pattern: showConfirmation({ message, title, confirmText, ... })
     options = {
-      confirmText: "Delete",
-      cancelText: "Cancel", 
-      confirmColor: "error",
-      icon: "🗑️",
-      description: "This action cannot be undone",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      confirmColor: "primary",
+      icon: "⚠️",
+      description: "",
+      showPrice: false,
       ...messageOrOptions,
     };
   }
@@ -120,6 +122,9 @@ export const showConfirmation = (
     confirmColor,
     icon,
     description,
+    showPrice,
+    price,
+    advancePercent = 30,
     onConfirm: finalOnConfirm,
     onCancel,
   } = options;
@@ -150,9 +155,11 @@ export const showConfirmation = (
           try {
             await finalOnConfirm();
             handleClose(true);
-          } catch  {
+          } catch (error) {
+            console.error('Confirmation error:', error);
             setLoading(false);
-            showSnackbar("error", "Operation failed! Please try again.");
+            showSnackbar("error", error instanceof Error ? error.message : "Operation failed! Please try again.");
+            // Don't close dialog on error
           }
         } else {
           handleClose(true);
@@ -177,14 +184,8 @@ export const showConfirmation = (
         }
       };
 
-      const getButtonHoverColor = () => {
-        switch(confirmColor) {
-          case "error": return "#b91c1c";
-          case "success": return "#15803d";
-          case "warning": return "#d97706";
-          default: return "#e64a19";
-        }
-      };
+      const advanceAmount = price ? (price * advancePercent) / 100 : 0;
+      const remainingAmount = price ? price - advanceAmount : 0;
 
       return (
         <Dialog
@@ -193,7 +194,7 @@ export const showConfirmation = (
           PaperProps={{
             sx: {
               borderRadius: 4,
-              width: { xs: "90%", sm: 420 },
+              width: { xs: "90%", sm: showPrice ? 450 : 420 },
               maxWidth: "90%",
               overflow: "hidden",
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
@@ -260,15 +261,39 @@ export const showConfirmation = (
                 color: "#1e293b", 
                 fontWeight: 500,
                 lineHeight: 1.5,
+                mb: showPrice ? 2 : 0
               }}>
                 {message}
               </Typography>
+              
+              {showPrice && price && (
+                <Box sx={{ 
+                  bgcolor: "#f8fafc", 
+                  borderRadius: 2, 
+                  p: 2, 
+                  mt: 2,
+                  border: "1px solid #e2e8f0"
+                }}>
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body2" color="textSecondary">Total Price</Typography>
+                    <Typography variant="body1" fontWeight={600}>₹{price.toLocaleString()}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body2" color="textSecondary">Advance Payment ({advancePercent}%)</Typography>
+                    <Typography variant="body1" fontWeight={600} color="#FF5722">₹{advanceAmount.toLocaleString()}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="textSecondary">Remaining Amount ({100 - advancePercent}%)</Typography>
+                    <Typography variant="body1">₹{remainingAmount.toLocaleString()}</Typography>
+                  </Box>
+                </Box>
+              )}
             </Box>
           </DialogContent>
           
           <DialogActions sx={{ 
             p: 2.5, 
-            pt: 0, 
+            pt: showPrice ? 0 : 2.5,
             gap: 2,
             bgcolor: "#f8fafc",
             borderTop: "1px solid #e2e8f0"
@@ -304,8 +329,8 @@ export const showConfirmation = (
                 borderRadius: 2,
                 py: 1,
                 bgcolor: getButtonColor(),
-                "&:hover": { bgcolor: getButtonHoverColor() },
-                "&.Mui-disabled": { bgcolor: "#fecaca", color: "#ef4444" }
+                "&:hover": { bgcolor: getButtonColor() + "dd" },
+                "&.Mui-disabled": confirmColor === "error" ? { bgcolor: "#fecaca", color: "#ef4444" } : {}
               }}
             >
               {loading ? "Processing..." : confirmText}

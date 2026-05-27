@@ -1,6 +1,5 @@
-// src/view/DashboardPages/shared/NotificationBell.tsx
 import { useState, useEffect } from 'react';
-import { IconButton, Badge, Menu, MenuItem, Typography, Box, Divider } from '@mui/material';
+import { IconButton, Badge, Menu, MenuItem, Typography, Box, Divider, useTheme, alpha } from '@mui/material';
 import { Notifications } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +14,7 @@ interface Notification {
 }
 
 export default function NotificationBell() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -28,14 +28,28 @@ export default function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications');
+      const auth = localStorage.getItem('auth-storage');
+      let token = '';
+      if (auth) {
+        try {
+          const parsed = JSON.parse(auth);
+          token = parsed.state?.token || parsed.token;
+        } catch {
+          token = '';
+        }
+      }
+      
+      const response = await fetch('/api/notifications', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
-        setNotifications(data.data);
-        setUnreadCount(data.data.filter((n: Notification) => !n.read).length);
+        setNotifications(data.data || []);
+        const unread = (data.data || []).filter((n: Notification) => !n.read).length;
+        setUnreadCount(unread);
       }
-    } catch  {
-      console.error('Failed to fetch notifications');
+    } catch {
+      console.debug('Notifications not available');
     }
   };
 
@@ -49,11 +63,12 @@ export default function NotificationBell() {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
-      await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' });
-      setUnreadCount(prev => prev - 1);
-      setNotifications(prev =>
-        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-      );
+      try {
+        await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' });
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch {
+        // Silently handle error
+      }
     }
     if (notification.link) {
       navigate(notification.link);
@@ -63,15 +78,15 @@ export default function NotificationBell() {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'booking': return '#1976d2';
-      case 'payment': return '#2e7d32';
-      default: return '#ff9800';
+      case 'booking': return theme.palette.primary.main;
+      case 'payment': return theme.palette.success.main;
+      default: return theme.palette.warning.main;
     }
   };
 
   return (
     <>
-      <IconButton color="inherit" onClick={handleOpen}>
+      <IconButton color="inherit" onClick={handleOpen} sx={{ color: 'white' }}>
         <Badge badgeContent={unreadCount} color="error">
           <Notifications />
         </Badge>
@@ -80,9 +95,11 @@ export default function NotificationBell() {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
-        PaperProps={{ sx: { width: 320, maxHeight: 400 } }}
+        PaperProps={{ sx: { width: 350, maxHeight: 450, borderRadius: 3, mt: 1 } }}
       >
-        <Typography sx={{ p: 2, fontWeight: 600 }}>Notifications</Typography>
+        <Typography sx={{ p: 2, fontWeight: 700, fontSize: '1rem', borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          Notifications
+        </Typography>
         <Divider />
         {notifications.length === 0 ? (
           <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
@@ -95,12 +112,16 @@ export default function NotificationBell() {
               onClick={() => handleNotificationClick(notification)}
               sx={{
                 whiteSpace: 'normal',
-                bgcolor: notification.read ? 'transparent' : 'action.hover',
+                bgcolor: notification.read ? 'transparent' : alpha(theme.palette.primary.main, 0.05),
                 borderLeft: `3px solid ${getNotificationColor(notification.type)}`,
+                borderRadius: 2,
+                mx: 1,
+                my: 0.5,
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
               }}
             >
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                   {notification.title}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">

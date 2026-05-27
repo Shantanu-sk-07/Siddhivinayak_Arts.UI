@@ -1,5 +1,4 @@
-// src/view/DashboardPages/SuperAdmin/BookingManagement.tsx
-import { useState, useEffect, JSX } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -10,40 +9,29 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton,
   Tabs,
   Tab,
   Grid,
   Card,
+  CardContent,
+  useTheme,
+  alpha,
+  IconButton,
 } from '@mui/material';
-import { Check, Close, Visibility } from '@mui/icons-material';
-import { UniversalTable, Column } from '@/components/uncontrolled/UniversalTable';
+import { Close } from '@mui/icons-material';
+import { UniversalTable, Column, ACTION_KEY } from '@/components/uncontrolled/UniversalTable';
 import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastMessage';
-import { Booking } from '@/types';
+import { BookingResponseDto } from '@/types';
 import DropdownField from '@/components/controlled/DropdownField';
 import { useForm, FormProvider } from 'react-hook-form';
+import { adminService } from '@/services/AdminService';
 
-// Convert Booking to Record<string, unknown> type
-type BookingRecord = Booking & Record<string, unknown>;
+type BookingRecord = BookingResponseDto & Record<string, unknown>;
 
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
-}
-
-interface BookingsResponse {
-  success: boolean;
-  data: Booking[];
-}
-
-interface ActionResponse {
-  success: boolean;
-  message?: string;
-}
-
-interface StatusUpdateData {
-  status: string;
 }
 
 const statusOptions = [
@@ -65,16 +53,15 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function BookingManagement() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const theme = useTheme();
+  const [bookings, setBookings] = useState<BookingResponseDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [tabValue, setTabValue] = useState<number>(0);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingResponseDto | null>(null);
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
 
   const methods = useForm<{ status: string }>({
-    defaultValues: {
-      status: '',
-    },
+    defaultValues: { status: '' },
   });
 
   useEffect(() => {
@@ -84,10 +71,9 @@ export default function BookingManagement() {
   const fetchBookings = async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/bookings');
-      const data: BookingsResponse = await response.json();
-      if (data.success && data.data) {
-        setBookings(data.data);
+      const response = await adminService.getAllBookings();
+      if (response.success && response.data) {
+        setBookings(response.data);
       }
     } catch {
       showSnackbar('error', 'Failed to fetch bookings');
@@ -96,21 +82,17 @@ export default function BookingManagement() {
     }
   };
 
-  const handleApprove = async (booking: Booking): Promise<void> => {
+  const handleApprove = async (booking: BookingResponseDto): Promise<void> => {
     const confirmed = await showConfirmation({
       message: `Approve booking for ${booking.customerName}?`,
       title: 'Approve Booking',
       confirmText: 'Approve',
       confirmColor: 'success',
     });
-
     if (confirmed) {
       try {
-        const response = await fetch(`/api/admin/bookings/${booking.id}/approve`, {
-          method: 'POST',
-        });
-        const data: ActionResponse = await response.json();
-        if (data.success) {
+        const response = await adminService.approveBooking(booking.id);
+        if (response.success) {
           showSnackbar('success', 'Booking approved successfully');
           await fetchBookings();
         }
@@ -120,21 +102,17 @@ export default function BookingManagement() {
     }
   };
 
-  const handleReject = async (booking: Booking): Promise<void> => {
+  const handleReject = async (booking: BookingResponseDto): Promise<void> => {
     const confirmed = await showConfirmation({
       message: `Reject booking for ${booking.customerName}?`,
       title: 'Reject Booking',
       confirmText: 'Reject',
       confirmColor: 'error',
     });
-
     if (confirmed) {
       try {
-        const response = await fetch(`/api/admin/bookings/${booking.id}/reject`, {
-          method: 'POST',
-        });
-        const data: ActionResponse = await response.json();
-        if (data.success) {
+        const response = await adminService.rejectBooking(booking.id);
+        if (response.success) {
           showSnackbar('success', 'Booking rejected');
           await fetchBookings();
         }
@@ -144,32 +122,28 @@ export default function BookingManagement() {
     }
   };
 
-  const handleStatusUpdate = async (booking: Booking, status: string): Promise<void> => {
+  const handleStatusUpdate = async (booking: BookingResponseDto, status: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status } as StatusUpdateData),
-      });
-      const data: ActionResponse = await response.json();
-      if (data.success) {
+      const response = await adminService.updateBookingStatus(booking.id, status);
+      if (response.success) {
         showSnackbar('success', 'Booking status updated');
         await fetchBookings();
+        setDetailsOpen(false);
       }
     } catch {
       showSnackbar('error', 'Failed to update status');
     }
   };
 
-  const viewDetails = (booking: Booking): void => {
+  const viewDetails = (booking: BookingResponseDto): void => {
     setSelectedBooking(booking);
     setDetailsOpen(true);
   };
 
-  const getPendingBookings = (): Booking[] => bookings.filter(b => b.status === 'PENDING_REQUEST');
-  const getApprovedBookings = (): Booking[] => bookings.filter(b => b.status === 'APPROVED');
-  const getConfirmedBookings = (): Booking[] => bookings.filter(b => b.status === 'CONFIRMED');
-  const getCompletedBookings = (): Booking[] => bookings.filter(b => b.status === 'PICKUP_COMPLETED');
+  const getPendingBookings = (): BookingResponseDto[] => bookings.filter(b => b.status === 'PENDING_REQUEST');
+  const getApprovedBookings = (): BookingResponseDto[] => bookings.filter(b => b.status === 'APPROVED');
+  const getConfirmedBookings = (): BookingResponseDto[] => bookings.filter(b => b.status === 'CONFIRMED');
+  const getCompletedBookings = (): BookingResponseDto[] => bookings.filter(b => b.status === 'PICKUP_COMPLETED');
 
   const getStatusColor = (status: string): 'success' | 'warning' | 'info' | 'default' | 'error' => {
     switch (status) {
@@ -182,79 +156,43 @@ export default function BookingManagement() {
     }
   };
 
-  // Define columns for UniversalTable using BookingRecord type
   const columns: Column<BookingRecord>[] = [
-    { key: 'bookingId' as keyof BookingRecord, label: 'Booking ID' },
-    { key: 'customerName' as keyof BookingRecord, label: 'Customer Name' },
-    { key: 'customerPhone' as keyof BookingRecord, label: 'Phone' },
-    { key: 'ganpatiName' as keyof BookingRecord, label: 'Ganpati' },
-    { 
-      key: 'totalAmount' as keyof BookingRecord, 
-      label: 'Total Amount', 
-      render: (row: BookingRecord): string => `₹${(row as Booking).totalAmount.toLocaleString()}` 
-    },
-    { 
-      key: 'advancePaid' as keyof BookingRecord, 
-      label: 'Paid', 
-      render: (row: BookingRecord): string => `₹${(row as Booking).advancePaid.toLocaleString()}` 
-    },
-    {
-      key: 'status' as keyof BookingRecord,
-      label: 'Status',
-      render: (row: BookingRecord): JSX.Element => {
-        const booking = row as Booking;
-        return (
-          <Chip 
-            label={booking.status.replace('_', ' ')} 
-            color={getStatusColor(booking.status)} 
-            size="small" 
-          />
-        );
-      },
-    },
-    {
-      key: 'actionbutton',
-      label: 'Actions',
-      render: (row: BookingRecord): JSX.Element => {
-        const booking = row as Booking;
-        return (
-          <Box display="flex" gap={1}>
-            <IconButton size="small" onClick={() => viewDetails(booking)}>
-              <Visibility fontSize="small" />
-            </IconButton>
-            {booking.status === 'PENDING_REQUEST' && (
-              <>
-                <IconButton size="small" color="success" onClick={() => handleApprove(booking)}>
-                  <Check fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="error" onClick={() => handleReject(booking)}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </>
-            )}
-          </Box>
-        );
-      },
-    },
+    { key: 'bookingId', label: 'Booking ID' },
+    { key: 'customerName', label: 'Customer Name' },
+    { key: 'customerPhone', label: 'Phone' },
+    { key: 'ganpatiName', label: 'Ganpati' },
+    { key: 'totalAmount', label: 'Total Amount', render: (row) => `₹${(row as BookingResponseDto).totalAmount.toLocaleString()}` },
+    { key: 'advancePaid', label: 'Paid', render: (row) => `₹${(row as BookingResponseDto).advancePaid.toLocaleString()}` },
+    { key: 'status', label: 'Status', render: (row) => (
+      <Chip label={(row as BookingResponseDto).status.replace('_', ' ')} color={getStatusColor((row as BookingResponseDto).status)} size="small" sx={{ borderRadius: 2, fontWeight: 500 }} />
+    )},
+    { key: ACTION_KEY, label: 'Actions' },
   ];
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-        Booking Management
-      </Typography>
+       <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700, 
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, 
+                  backgroundClip: 'text', 
+                  WebkitBackgroundClip: 'text', 
+                  color: 'transparent',
+                  mb:2,
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+                }}
+              >
+                Booking Management
+              </Typography>
 
-      <Paper sx={{ width: '100%' }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={(_event: React.SyntheticEvent, v: number) => setTabValue(v)} 
-          sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
-        >
-          <Tab label={`Pending (${getPendingBookings().length})`} />
-          <Tab label={`Approved (${getApprovedBookings().length})`} />
-          <Tab label={`Confirmed (${getConfirmedBookings().length})`} />
-          <Tab label={`Completed (${getCompletedBookings().length})`} />
-          <Tab label="All" />
+      <Paper sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+        <Tabs value={tabValue} onChange={(_event, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider', px: 2, pt: 1 }}>
+          <Tab label={`Pending (${getPendingBookings().length})`} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }} />
+          <Tab label={`Approved (${getApprovedBookings().length})`} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }} />
+          <Tab label={`Confirmed (${getConfirmedBookings().length})`} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }} />
+          <Tab label={`Completed (${getCompletedBookings().length})`} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }} />
+          <Tab label="All" sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }} />
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
@@ -263,32 +201,44 @@ export default function BookingManagement() {
             columns={columns}
             loading={loading}
             rowsPerPage={10}
+            actions={{
+              view: (row) => viewDetails(row as BookingResponseDto),
+              approve: (row) => handleApprove(row as BookingResponseDto),
+              reject: (row) => handleReject(row as BookingResponseDto),
+            }}
           />
         </TabPanel>
+
         <TabPanel value={tabValue} index={1}>
           <UniversalTable<BookingRecord>
             data={getApprovedBookings() as BookingRecord[]}
             columns={columns}
             loading={loading}
             rowsPerPage={10}
+            actions={{ view: (row) => viewDetails(row as BookingResponseDto) }}
           />
         </TabPanel>
+
         <TabPanel value={tabValue} index={2}>
           <UniversalTable<BookingRecord>
             data={getConfirmedBookings() as BookingRecord[]}
             columns={columns}
             loading={loading}
             rowsPerPage={10}
+            actions={{ view: (row) => viewDetails(row as BookingResponseDto) }}
           />
         </TabPanel>
+
         <TabPanel value={tabValue} index={3}>
           <UniversalTable<BookingRecord>
             data={getCompletedBookings() as BookingRecord[]}
             columns={columns}
             loading={loading}
             rowsPerPage={10}
+            actions={{ view: (row) => viewDetails(row as BookingResponseDto) }}
           />
         </TabPanel>
+
         <TabPanel value={tabValue} index={4}>
           <UniversalTable<BookingRecord>
             data={bookings as BookingRecord[]}
@@ -297,54 +247,51 @@ export default function BookingManagement() {
             rowsPerPage={10}
             showSearch
             showExport
+            actions={{
+              view: (row) => viewDetails(row as BookingResponseDto),
+              approve: (row) => (row as BookingResponseDto).status === 'PENDING_REQUEST' ? handleApprove(row as BookingResponseDto) : undefined,
+              reject: (row) => (row as BookingResponseDto).status === 'PENDING_REQUEST' ? handleReject(row as BookingResponseDto) : undefined,
+            }}
           />
         </TabPanel>
       </Paper>
 
-      {/* Details Dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
         {selectedBooking && (
           <>
-            <DialogTitle>Booking Details - {selectedBooking.bookingId}</DialogTitle>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+              <Typography variant="h6" fontWeight={700}>Booking Details - {selectedBooking.bookingId}</Typography>
+              <IconButton onClick={() => setDetailsOpen(false)}><Close /></IconButton>
+            </DialogTitle>
             <DialogContent>
               <Grid container spacing={2}>
-                <Grid size={{xs: 12, md: 6}}>
-                  <Typography variant="subtitle2" gutterBottom>Customer Information</Typography>
-                  <Card variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2">Name: {selectedBooking.customerName}</Typography>
-                    <Typography variant="body2">Phone: {selectedBooking.customerPhone}</Typography>
-                    <Typography variant="body2">Booking Date: {new Date(selectedBooking.createdAt).toLocaleDateString()}</Typography>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Customer Information</Typography>
+                  <Card sx={{ borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+                    <CardContent>
+                      <Typography variant="body2" sx={{ mb: 1 }}>Name: <strong>{selectedBooking.customerName}</strong></Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>Phone: {selectedBooking.customerPhone}</Typography>
+                      <Typography variant="body2">Booking Date: {new Date(selectedBooking.createdAt).toLocaleDateString()}</Typography>
+                    </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{xs: 12, md: 6}}>
-                  <Typography variant="subtitle2" gutterBottom>Ganpati Information</Typography>
-                  <Card variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2">Name: {selectedBooking.ganpatiName}</Typography>
-                    <Typography variant="body2">Total Amount: ₹{selectedBooking.totalAmount.toLocaleString()}</Typography>
-                    <Typography variant="body2">Advance Paid: ₹{selectedBooking.advancePaid.toLocaleString()}</Typography>
-                    <Typography variant="body2">Remaining: ₹{selectedBooking.remainingAmount.toLocaleString()}</Typography>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Ganpati Information</Typography>
+                  <Card sx={{ borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.04) }}>
+                    <CardContent>
+                      <Typography variant="body2" sx={{ mb: 1 }}>Name: <strong>{selectedBooking.ganpatiName}</strong></Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>Total Amount: ₹{selectedBooking.totalAmount.toLocaleString()}</Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>Advance Paid: ₹{selectedBooking.advancePaid.toLocaleString()}</Typography>
+                      <Typography variant="body2">Remaining: ₹{selectedBooking.remainingAmount.toLocaleString()}</Typography>
+                    </CardContent>
                   </Card>
                 </Grid>
                 <Grid size={12}>
-                  <Typography variant="subtitle2" gutterBottom>Update Status</Typography>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Update Status</Typography>
                   <FormProvider {...methods}>
-                    <Box display="flex" gap={2} alignItems="center">
-                      <DropdownField
-                        name="status"
-                        options={statusOptions}
-                        defaultValue={selectedBooking.status}
-                        sx={{ width: 200 }}
-                      />
-                      <Button
-                        variant="contained"
-                        onClick={() => {
-                          const newStatus = methods.getValues('status');
-                          if (newStatus) {
-                            handleStatusUpdate(selectedBooking, newStatus);
-                            setDetailsOpen(false);
-                          }
-                        }}
-                      >
+                    <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+                      <DropdownField name="status" options={statusOptions} defaultValue={selectedBooking.status} sx={{ width: 220 }} />
+                      <Button variant="contained" onClick={() => { const newStatus = methods.getValues('status'); if (newStatus) handleStatusUpdate(selectedBooking, newStatus); }} sx={{ borderRadius: 3, px: 3, textTransform: 'none', fontWeight: 600 }}>
                         Update Status
                       </Button>
                     </Box>
@@ -352,8 +299,8 @@ export default function BookingManagement() {
                 </Grid>
               </Grid>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => setDetailsOpen(false)} variant="outlined" sx={{ borderRadius: 3, textTransform: 'none' }}>Close</Button>
             </DialogActions>
           </>
         )}

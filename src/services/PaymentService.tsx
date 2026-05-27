@@ -1,33 +1,50 @@
 // src/services/paymentService.ts
-import { Payment, ApiResponse } from '@/types';
-
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+import { apiClient } from './api';
+import { PaymentResponseDto, ApiResponse } from '@/types';
 
 export const paymentService = {
-  async makePayment(bookingId: string, amount: number, method: string): Promise<ApiResponse<Payment>> {
-    const response = await fetch(`${API_BASE}/payments/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId, amount, method }),
-    });
-    return response.json();
+  // Payment history
+  async getPaymentHistory(bookingId: string): Promise<ApiResponse<PaymentResponseDto[]>> {
+    return apiClient<ApiResponse<PaymentResponseDto[]>>(`/customer/payments/${bookingId}`);
   },
 
-  async uploadOfflinePayment(bookingId: string, amount: number, screenshot: File): Promise<ApiResponse<Payment>> {
+  async getAllPayments(): Promise<ApiResponse<PaymentResponseDto[]>> {
+    return apiClient<ApiResponse<PaymentResponseDto[]>>('/customer/payments/all');
+  },
+
+  // Offline payment
+  async uploadOfflinePayment(bookingId: string, amount: number, screenshot: File, transactionId: string): Promise<ApiResponse<PaymentResponseDto>> {
     const formData = new FormData();
     formData.append('bookingId', bookingId);
     formData.append('amount', amount.toString());
+    formData.append('transactionId', transactionId);
     formData.append('screenshot', screenshot);
     
-    const response = await fetch(`${API_BASE}/payments/offline`, {
+    return apiClient<ApiResponse<PaymentResponseDto>>('/customer/payments/offline', {
       method: 'POST',
       body: formData,
+      headers: {},
     });
-    return response.json();
   },
 
-  async getPaymentHistory(bookingId: string): Promise<ApiResponse<Payment[]>> {
-    const response = await fetch(`${API_BASE}/payments/booking/${bookingId}`);
-    return response.json();
+  // Online payment - Create order
+  async createOrder(bookingId: string, amount: number): Promise<ApiResponse<{ order: { id: string; amount: number; currency: string } }>> {
+    return apiClient<ApiResponse<{ order: { id: string; amount: number; currency: string } }>>('/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ bookingId, amount }),
+    });
+  },
+
+  // Online payment - Verify
+  async verifyPayment(razorpay_payment_id: string, razorpay_order_id: string, razorpay_signature: string, bookingId: string): Promise<ApiResponse<{ success: boolean; message?: string }>> {
+    return apiClient<ApiResponse<{ success: boolean; message?: string }>>('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify({ razorpay_payment_id, razorpay_order_id, razorpay_signature, bookingId }),
+    });
+  },
+
+  // Get receipt
+  async getReceipt(paymentId: string): Promise<ApiResponse<{ url: string }>> {
+    return apiClient<ApiResponse<{ url: string }>>(`/payments/receipt/${paymentId}`);
   },
 };

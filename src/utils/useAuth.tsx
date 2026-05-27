@@ -1,3 +1,4 @@
+// src/utils/useAuth.ts
 import { useAuthStore } from '@/store/AuthStore';
 import { useCallback } from 'react';
 import { ApiResponse, User } from '@/types';
@@ -14,8 +15,8 @@ export const useAuth = () => {
         const { token: authToken, ...userData } = response.data;
         login(userData as User, authToken);
       }
-      return response as ApiResponse<User>;
-    } catch  {
+      return response as unknown as ApiResponse<User>;
+    } catch {
       return {
         success: false,
         data: null as unknown as User,

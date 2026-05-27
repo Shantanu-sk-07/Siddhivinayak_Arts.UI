@@ -1,3 +1,4 @@
+// src/view/AuthPages/Login.tsx
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -15,6 +16,7 @@ import { useAuth } from '@/utils/useAuth';
 import { showSnackbar } from '@/components/uncontrolled/ToastMessage';
 import EmailField from '@/components/controlled/EmailField';
 import PasswordField from '@/components/controlled/PasswordField';
+import Logo from '@/assets/Logo.jfif';
 
 interface LoginFormData {
   email: string;
@@ -62,7 +64,7 @@ export default function Login() {
       } else {
         setError(response.message || 'Invalid email or password');
       }
-    } catch  {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -83,7 +85,7 @@ export default function Login() {
         <Card sx={{ width: '100%', borderRadius: 4, boxShadow: 3 }}>
           <CardContent sx={{ p: 4 }}>
             <Box textAlign="center" mb={3}>
-              <img src="/logo.png" alt="Siddhivinayak Arts" style={{ height: 80 }} />
+              <img src={Logo} alt="Siddhivinayak Arts" style={{ height: 80 }} />
               <Typography variant="h5" sx={{ mt: 2, fontWeight: 600 }}>
                 Welcome Back
               </Typography>

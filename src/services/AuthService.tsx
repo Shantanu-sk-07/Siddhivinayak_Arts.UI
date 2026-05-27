@@ -1,81 +1,36 @@
-import { User, ApiResponse } from '@/types';
-
-interface LoginResponseData extends User {
-  token: string;
-}
-
-const API_BASE_URL = 'http://localhost:8080/api';
+import { apiClient } from './api';
+import { ApiResponse, LoginResponse, RegisterResponseDto, RegisterRequest } from '@/types';
 
 export const authService = {
-  async login(email: string, password: string): Promise<ApiResponse<LoginResponseData>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      return await response.json();
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as LoginResponseData,
-        message: 'Network error. Please check if backend is running.',
-      };
-    }
+  async login(email: string, password: string): Promise<ApiResponse<LoginResponse>> {
+    return apiClient<ApiResponse<LoginResponse>>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
   },
 
-  async register(userData: Partial<User> & { password: string }): Promise<ApiResponse<User>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      return await response.json();
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as User,
-        message: 'Registration failed. Please try again.',
-      };
-    }
+  async register(userData: RegisterRequest): Promise<ApiResponse<RegisterResponseDto>> {
+    return apiClient<ApiResponse<RegisterResponseDto>>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
   },
 
   async forgotPassword(email: string): Promise<ApiResponse<null>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      return await response.json();
-    } catch {
-      return {
-        success: false,
-        data: null,
-        message: 'Failed to send reset link.',
-      };
-    }
+    return apiClient<ApiResponse<null>>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
   },
 
   async resetPassword(token: string, password: string): Promise<ApiResponse<null>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
-      return await response.json();
-    } catch {
-      return {
-        success: false,
-        data: null,
-        message: 'Failed to reset password.',
-      };
-    }
+    return apiClient<ApiResponse<null>>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
   },
 
-  async logout(): Promise<void> {
+  logout(): void {
     localStorage.removeItem('auth-storage');
   },
 };

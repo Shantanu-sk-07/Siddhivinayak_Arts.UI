@@ -1,34 +1,37 @@
 // src/services/bookingService.ts
-import { Booking, ApiResponse } from '@/types';
+import { apiClient } from './api';
+import { BookingResponseDto, ApiResponse } from '@/types';
 
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+interface QRCodeData {
+  bookingId: string;
+  customerName: string;
+  customerPhone: string;
+  ganpatiName: string;
+  totalAmount: number;
+  advancePaid: number;
+  remainingAmount: number;
+  status: string;
+  bookingDate: string;
+  timestamp: string;
+}
 
 export const bookingService = {
-  async getMyBookings(): Promise<ApiResponse<Booking[]>> {
-    const response = await fetch(`${API_BASE}/customer/bookings`);
-    return response.json();
+  async getMyBookings(): Promise<ApiResponse<BookingResponseDto[]>> {
+    return apiClient<ApiResponse<BookingResponseDto[]>>('/customer/bookings');
   },
 
-  async requestBooking(ganpatiId: string): Promise<ApiResponse<Booking>> {
-    const response = await fetch(`${API_BASE}/customer/booking-request`, {
+  async getBookingDetails(id: string): Promise<ApiResponse<BookingResponseDto>> {
+    return apiClient<ApiResponse<BookingResponseDto>>(`/customer/bookings/${id}`);
+  },
+
+  async requestBooking(ganpatiId: string, advancePaid?: number): Promise<ApiResponse<BookingResponseDto>> {
+    return apiClient<ApiResponse<BookingResponseDto>>('/customer/booking-request', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ganpatiId }),
+      body: JSON.stringify({ ganpatiId, advancePaid }),
     });
-    return response.json();
   },
 
-  async getBookingDetails(id: string): Promise<ApiResponse<Booking>> {
-    const response = await fetch(`${API_BASE}/bookings/${id}`);
-    return response.json();
-  },
-
-  async updateStatus(id: string, status: string): Promise<ApiResponse<Booking>> {
-    const response = await fetch(`${API_BASE}/admin/bookings/${id}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    return response.json();
+  async getQRCodeData(bookingId: string): Promise<ApiResponse<QRCodeData>> {
+    return apiClient<ApiResponse<QRCodeData>>(`/customer/qr/${bookingId}`);
   },
 };

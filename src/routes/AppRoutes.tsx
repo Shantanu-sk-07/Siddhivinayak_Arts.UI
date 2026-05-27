@@ -37,8 +37,8 @@ import AboutUs from '@/view/WebsitePages/AboutUs';
 import ContactUs from '@/view/WebsitePages/ContactUs';
 
 // Profile & Settings Pages (create these if needed)
-import Profile from '@/view/WebsitePages/Profile';
-import Settings from '@/view/WebsitePages/Settings';
+import Profile from '@/view/DashboardPages/SuperAdmin/Profile';
+import Settings from '@/view/DashboardPages/SuperAdmin/Settings';
 
 import { UrlPath } from '@/constants/UrlPath';
 

@@ -1,6 +1,0 @@
-/* Remove any @import statements for Tailwind */
-@tailwind components;
-@tailwind utilities;
-
-/* Your custom styles below */
-/* Make sure there are NO @tailwind base directive */

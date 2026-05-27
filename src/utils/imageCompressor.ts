@@ -8,8 +8,8 @@ export interface CompressionOptions {
 const DEFAULT_OPTIONS: CompressionOptions = {
   maxWidth: 800,
   maxHeight: 800,
-  quality: 0.6,
-  maxSizeKB: 200,
+  quality: 0.7,
+  maxSizeKB: 300,
 };
 
 export const compressImage = async (
@@ -17,6 +17,10 @@ export const compressImage = async (
   options: CompressionOptions = DEFAULT_OPTIONS
 ): Promise<File> => {
   const { maxWidth, maxHeight, quality, maxSizeKB } = { ...DEFAULT_OPTIONS, ...options };
+
+  if (file.size <= maxSizeKB! * 1024) {
+    return file;
+  }
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -45,7 +49,12 @@ export const compressImage = async (
         canvas.height = height;
         
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
         
         canvas.toBlob(
           (blob) => {
@@ -55,8 +64,10 @@ export const compressImage = async (
                 lastModified: Date.now(),
               });
               
-              if (compressedFile.size > maxSizeKB! * 1024) {
-                compressImage(compressedFile, { ...options, quality: (quality || 0.6) - 0.1 }).then(resolve).catch(reject);
+              if (compressedFile.size > maxSizeKB! * 1024 && quality! > 0.3) {
+                compressImage(compressedFile, { ...options, quality: (quality || 0.7) - 0.1 })
+                  .then(resolve)
+                  .catch(reject);
               } else {
                 resolve(compressedFile);
               }
@@ -86,4 +97,9 @@ export const compressMultipleImages = async (
     compressed.push(result);
   }
   return compressed;
+};
+
+export const isValidImage = (file: File): boolean => {
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  return allowedTypes.includes(file.type);
 };
