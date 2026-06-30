@@ -20,7 +20,7 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { useFormContext } from "react-hook-form";
-import { compressMultipleImages } from "@/helpers/imageCompressor";
+import { compressMultipleImages } from "@/utils/imageCompressor";
 import {
   showSnackbar,
 } from "@/components/uncontrolled/ToastMessage";
@@ -42,6 +42,7 @@ interface PhotoUploadProps {
   targetSizeKB?: number;
   maxWidth?: number;
   maxHeight?: number;
+  compress?: boolean;
 }
 
 type FormValues = Record<string, unknown>;
@@ -62,6 +63,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
   targetSizeKB = 100,
   maxWidth,
   maxHeight,
+  compress = true,
 }) => {
   const {
     setValue,
@@ -232,23 +234,27 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
     
     try {
       setUploadProgress(30);
-      const compressedFiles = await compressMultipleImages(filesToAdd, {
-        maxWidth: 800,
-        maxHeight: 800,
-        quality: 0.7,
-        maxSizeKB: targetSizeKB,
-      });
-      setUploadProgress(80);
-      const updatedFiles = [...currentFiles, ...compressedFiles];
+     let processedFiles;
+if (compress) {
+  processedFiles = await compressMultipleImages(filesToAdd, {
+    maxWidth: 800,
+    maxHeight: 800,
+    quality: 0.7,
+    maxSizeKB: targetSizeKB,
+  });
+} else {
+  processedFiles = filesToAdd;
+}
+const updatedFiles = [...currentFiles, ...processedFiles];
       setValue(name, updatedFiles, {
         shouldValidate: true,
         shouldDirty: true,
       });
       setUploadProgress(100);
-      showSnackbar("success", `${compressedFiles.length} image(s) uploaded`);
+      showSnackbar("success", `${processedFiles.length} image(s) uploaded${compress ? " and compressed" : ""}`);
     } catch (error) {
       console.error("Compression error:", error);
-      showSnackbar("error", "Failed to compress images");
+      showSnackbar("error", compress ? "Failed to compress images" : "Failed to upload images");
     } finally {
       setTimeout(() => {
         setUploading(false);
@@ -256,8 +262,9 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
       }, 300);
     }
   },
-  [getSafePhotosArray, maxFiles, name, setValue, targetSizeKB, validateImageDimensions]
-);
+
+   [getSafePhotosArray, maxFiles, name, setValue, targetSizeKB, validateImageDimensions, compress]);
+
 
  const handleFileChange = useCallback(
   async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {

@@ -461,6 +461,7 @@ export default function GanpatiManagement() {
                         name="images"
                         label="Images"
                         maxFiles={5}
+                        compress={false}
                         required={!editingGanpati}
                         defaultPhotos={editingGanpati?.images || []}
                       />
