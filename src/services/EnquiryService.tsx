@@ -1,4 +1,4 @@
-// src/services/EnquiryService.tsx
+// src/services/EnquiryService.ts
 import { apiClient } from './api';
 import { ApiResponse, EnquiryFormData } from '@/types/MurtiType';
 
@@ -27,6 +27,7 @@ export const enquiryService = {
       const response = await apiClient<ApiResponse<{ customerId: string; message: string }>>('/customers/register', {
         method: 'POST',
         body: JSON.stringify(payload),
+        skipAuth: true
       });
       return response;
     } catch (error) {

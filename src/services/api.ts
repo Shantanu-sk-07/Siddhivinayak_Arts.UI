@@ -1,10 +1,12 @@
-import { getToken, clearToken } from '@/helpers/auth';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// src/services/api.ts
+import { getToken, clearToken, getApiBaseUrl } from '@/helpers/auth';
 
 interface ApiOptions extends RequestInit {
   headers?: Record<string, string>;
+  skipAuth?: boolean;
 }
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const apiClient = async <T = unknown>(
   endpoint: string,
@@ -17,7 +19,7 @@ export const apiClient = async <T = unknown>(
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token) {
+  if (token && !options.skipAuth) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -109,3 +111,5 @@ export const apiFormData = async <T = unknown>(
     throw error;
   }
 };
+
+export const getApiUrl = (): string => API_BASE_URL;

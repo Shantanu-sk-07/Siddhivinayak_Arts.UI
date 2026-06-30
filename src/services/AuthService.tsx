@@ -1,4 +1,4 @@
-// src/services/AuthService.tsx
+// src/services/AuthService.ts
 import { apiClient } from './api';
 import { setToken, clearToken } from '@/helpers/auth';
 import { ApiResponse, LoginResponse } from '@/types/MurtiType';
@@ -9,6 +9,7 @@ export const authService = {
       const response = await apiClient<ApiResponse<LoginResponse>>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
+        skipAuth: true
       });
 
       if (response.success && response.data?.token) {
@@ -30,5 +31,6 @@ export const authService = {
   logout(): void {
     clearToken();
     localStorage.removeItem('userName');
-  },
+    localStorage.removeItem('userId');
+  }
 };

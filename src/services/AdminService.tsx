@@ -1,4 +1,4 @@
-// src/services/AdminService.tsx
+// src/services/AdminService.ts
 import { apiClient, apiFormData } from './api';
 import { 
   GanpatiResponseDto, 
@@ -193,5 +193,5 @@ export const adminService = {
     return apiClient<ApiResponse<string>>(`/admin/bookings/${id}/send-receipt`, {
       method: 'POST',
     });
-  },
+  }
 };
