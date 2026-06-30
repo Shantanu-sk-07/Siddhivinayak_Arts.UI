@@ -1,21 +1,14 @@
+// src/services/AdminService.tsx
 import { apiClient, apiFormData } from './api';
 import { 
-  GanpatiResponseDto, ApiResponse, BookingResponseDto, 
-  PaymentResponseDto, StaffResponseDto, CustomerResponseDto, 
-  DashboardStats, StaffFormData, PickupStats 
-} from '@/types';
-
-interface ReportData {
-  totalRevenue: number;
-  totalBookings: number;
-  totalCustomers: number;
-  completedPickups: number;
-  revenueTrend: number;
-  bookingTrend: number;
-  monthlyData: Array<{ month: string; revenue: number; bookings: number }>;
-  topGanpati: Array<{ name: string; bookings: number; revenue: number }>;
-  paymentMethodBreakdown: Array<{ name: string; value: number }>;
-}
+  GanpatiResponseDto, 
+  ApiResponse, 
+  User, 
+  ConfirmedBooking, 
+  ConfirmedBookingRequest,
+  CustomerFormData,
+  RegistrationType
+} from '@/types/MurtiType';
 
 export const adminService = {
   async getAllGanpati(): Promise<ApiResponse<GanpatiResponseDto[]>> {
@@ -36,138 +29,169 @@ export const adminService = {
     });
   },
 
-  async getAllBookings(): Promise<ApiResponse<BookingResponseDto[]>> {
-    return apiClient<ApiResponse<BookingResponseDto[]>>('/admin/bookings');
+  async getAllCustomers(): Promise<ApiResponse<User[]>> {
+    return apiClient<ApiResponse<User[]>>('/admin/customers');
   },
 
-  async approveBooking(id: string): Promise<ApiResponse<BookingResponseDto>> {
-    return apiClient<ApiResponse<BookingResponseDto>>(`/admin/bookings/${id}/approve`, {
+  async getCustomersByType(type: RegistrationType): Promise<ApiResponse<User[]>> {
+    return apiClient<ApiResponse<User[]>>(`/admin/customers/type/${type}`);
+  },
+
+  async getCustomerById(id: string): Promise<ApiResponse<User>> {
+    return apiClient<ApiResponse<User>>(`/admin/customers/${id}`);
+  },
+
+  async createCustomer(data: CustomerFormData): Promise<ApiResponse<User>> {
+    const payload = {
+      name: data.name,
+      phone: data.phone,
+      alternatePhone: data.alternatePhone || '',
+      registrationType: data.registrationType,
+      mandalName: data.mandalName || '',
+      address: data.address || '',
+      taluka: data.taluka || '',
+      district: data.district || '',
+      state: data.state || 'Maharashtra',
+      city: data.city || '',
+      ganpatiId: data.ganpatiId || '',
+      contactPersons: data.contactPersons || [],
+      adhyakshyaName: data.adhyakshyaName || '',
+      adhyakshyaPhone: data.adhyakshyaPhone || '',
+      contactPerson1Phone: data.contactPerson1Phone || '',
+      contactPerson2Phone: data.contactPerson2Phone || '',
+    };
+
+    return apiClient<ApiResponse<User>>('/admin/customers', {
       method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 
-  async rejectBooking(id: string): Promise<ApiResponse<BookingResponseDto>> {
-    return apiClient<ApiResponse<BookingResponseDto>>(`/admin/bookings/${id}/reject`, {
-      method: 'POST',
-    });
-  },
+  async updateCustomer(id: string, data: Partial<CustomerFormData>): Promise<ApiResponse<User>> {
+    const payload = {
+      name: data.name || '',
+      phone: data.phone || '',
+      alternatePhone: data.alternatePhone || '',
+      registrationType: data.registrationType,
+      mandalName: data.mandalName || '',
+      address: data.address || '',
+      taluka: data.taluka || '',
+      district: data.district || '',
+      state: data.state || 'Maharashtra',
+      city: data.city || '',
+      ganpatiId: data.ganpatiId || '',
+      contactPersons: data.contactPersons || [],
+      adhyakshyaName: data.adhyakshyaName || '',
+      adhyakshyaPhone: data.adhyakshyaPhone || '',
+      contactPerson1Phone: data.contactPerson1Phone || '',
+      contactPerson2Phone: data.contactPerson2Phone || '',
+    };
 
-  async updateBookingStatus(id: string, status: string): Promise<ApiResponse<BookingResponseDto>> {
-    return apiClient<ApiResponse<BookingResponseDto>>(`/admin/bookings/${id}/status`, {
+    return apiClient<ApiResponse<User>>(`/admin/customers/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
     });
   },
 
-  async getPendingPayments(): Promise<ApiResponse<PaymentResponseDto[]>> {
-    return apiClient<ApiResponse<PaymentResponseDto[]>>('/admin/payments/pending');
-  },
-
-  async verifyPayment(paymentId: string, status: 'VERIFIED' | 'REJECTED'): Promise<ApiResponse<PaymentResponseDto>> {
-    return apiClient<ApiResponse<PaymentResponseDto>>(`/admin/payments/${paymentId}/verify`, {
-      method: 'POST',
-      body: JSON.stringify({ status }),
-    });
-  },
-
-  async getAllStaff(): Promise<ApiResponse<StaffResponseDto[]>> {
-    return apiClient<ApiResponse<StaffResponseDto[]>>('/admin/staff');
-  },
-
-  async addStaff(data: StaffFormData): Promise<ApiResponse<StaffResponseDto>> {
-    return apiClient<ApiResponse<StaffResponseDto>>('/admin/staff', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updateStaff(id: string, data: StaffFormData): Promise<ApiResponse<StaffResponseDto>> {
-    return apiClient<ApiResponse<StaffResponseDto>>(`/admin/staff/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async deleteStaff(id: string): Promise<ApiResponse<null>> {
-    return apiClient<ApiResponse<null>>(`/admin/staff/${id}`, {
+  async deleteCustomer(id: string): Promise<ApiResponse<null>> {
+    return apiClient<ApiResponse<null>>(`/admin/customers/${id}`, {
       method: 'DELETE',
     });
   },
 
-  async getAllCustomers(): Promise<ApiResponse<CustomerResponseDto[]>> {
-    return apiClient<ApiResponse<CustomerResponseDto[]>>('/admin/customers');
+  async getAllBookings(): Promise<ApiResponse<ConfirmedBooking[]>> {
+    return apiClient<ApiResponse<ConfirmedBooking[]>>('/admin/bookings');
   },
 
-  async getTodaysPickups(): Promise<ApiResponse<BookingResponseDto[]>> {
-    return apiClient<ApiResponse<BookingResponseDto[]>>('/admin/pickups/today');
+  async getBookingsByCustomer(customerId: string): Promise<ApiResponse<ConfirmedBooking[]>> {
+    return apiClient<ApiResponse<ConfirmedBooking[]>>(`/admin/bookings/customer/${customerId}`);
   },
 
-  async completePickup(bookingId: string): Promise<ApiResponse<BookingResponseDto>> {
-    return apiClient<ApiResponse<BookingResponseDto>>(`/admin/pickups/${bookingId}/complete`, {
+  async getBookingById(id: string): Promise<ApiResponse<ConfirmedBooking>> {
+    return apiClient<ApiResponse<ConfirmedBooking>>(`/admin/bookings/${id}`);
+  },
+
+  async createBooking(data: ConfirmedBookingRequest): Promise<ApiResponse<ConfirmedBooking>> {
+    const payload = {
+      customerId: data.customerId || '',
+      customerName: data.customerName || '',
+      customerEmail: data.customerEmail || '',
+      customerPhone: data.customerPhone || '',
+      customerAddress: data.customerAddress || '',
+      customerTaluka: data.customerTaluka || '',
+      customerDistrict: data.customerDistrict || '',
+      mandalName: data.mandalName || '',
+      additionalContacts: data.additionalContacts || [],
+      ganpatiId: data.ganpatiId,
+      advancePayment: data.advancePayment,
+      remainingPayment: data.remainingPayment,
+      totalPrice: data.totalPrice,
+      bookingDate: data.bookingDate || new Date().toISOString().split('T')[0],
+      notes: data.notes || '',
+      status: data.status || 'CONFIRMED',
+      createNewCustomer: data.createNewCustomer || false,
+      customerRegistrationType: data.customerRegistrationType || 'HOME',
+      customerContactPersons: data.customerContactPersons || [],
+      installments: data.installments || []
+    };
+
+    return apiClient<ApiResponse<ConfirmedBooking>>('/admin/bookings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async promoteCustomer(id: string): Promise<ApiResponse<User>> {
+    return apiClient<ApiResponse<User>>(`/admin/customers/${id}/promote`, {
       method: 'POST',
     });
   },
 
-  async getPickupStats(): Promise<ApiResponse<PickupStats>> {
-    return apiClient<ApiResponse<PickupStats>>('/admin/pickups/stats');
-  },
-
-  async searchByPhone(phone: string): Promise<ApiResponse<{ booking: BookingResponseDto }>> {
-    return apiClient<ApiResponse<{ booking: BookingResponseDto }>>(`/admin/pickups/search?phone=${phone}`);
-  },
-
-  async verifyBooking(bookingId: string): Promise<ApiResponse<BookingResponseDto>> {
-    return apiClient<ApiResponse<BookingResponseDto>>('/admin/pickups/verify-booking', {
+  async unpromoteCustomer(id: string): Promise<ApiResponse<User>> {
+    return apiClient<ApiResponse<User>>(`/admin/customers/${id}/unpromote`, {
       method: 'POST',
-      body: JSON.stringify(bookingId),
     });
   },
 
-  async printReceipt(bookingId: string): Promise<Blob> {
-    const token = localStorage.getItem('auth-storage');
-    let authToken = '';
-    if (token) {
-      try {
-        const parsed = JSON.parse(token);
-        authToken = parsed.state?.token || parsed.token;
-      } catch {
-        authToken = '';
-      }
-    }
-    
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/admin/pickups/receipt/${bookingId}`, {
-      headers: { 'Authorization': `Bearer ${authToken}` },
+  async updateBooking(id: string, data: ConfirmedBookingRequest): Promise<ApiResponse<ConfirmedBooking>> {
+    const payload = {
+      customerId: data.customerId || '',
+      customerName: data.customerName || '',
+      customerEmail: data.customerEmail || '',
+      customerPhone: data.customerPhone || '',
+      customerAddress: data.customerAddress || '',
+      customerTaluka: data.customerTaluka || '',
+      customerDistrict: data.customerDistrict || '',
+      mandalName: data.mandalName || '',
+      additionalContacts: data.additionalContacts || [],
+      ganpatiId: data.ganpatiId,
+      advancePayment: data.advancePayment,
+      remainingPayment: data.remainingPayment,
+      totalPrice: data.totalPrice,
+      bookingDate: data.bookingDate || '',
+      notes: data.notes || '',
+      status: data.status || 'CONFIRMED',
+      createNewCustomer: false,
+      customerRegistrationType: data.customerRegistrationType || 'HOME',
+      customerContactPersons: data.customerContactPersons || [],
+      installments: data.installments || []
+    };
+
+    return apiClient<ApiResponse<ConfirmedBooking>>(`/admin/bookings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     });
-    
-    if (!response.ok) {
-      throw new Error('Failed to print receipt');
-    }
-    return response.blob();
   },
 
-  async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-    return apiClient<ApiResponse<DashboardStats>>('/admin/dashboard-stats');
-  },
-
-  async getReports(range: string): Promise<ApiResponse<ReportData>> {
-    return apiClient<ApiResponse<ReportData>>(`/admin/reports?range=${range}`);
-  },
-
-  async exportReport(range: string): Promise<Blob> {
-    const token = localStorage.getItem('auth-storage');
-    let authToken = '';
-    if (token) {
-      try {
-        const parsed = JSON.parse(token);
-        authToken = parsed.state?.token || parsed.token;
-      } catch {
-        authToken = '';
-      }
-    }
-    
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/admin/reports/export?range=${range}`, {
-      headers: { 'Authorization': `Bearer ${authToken}` },
+  async deleteBooking(id: string): Promise<ApiResponse<null>> {
+    return apiClient<ApiResponse<null>>(`/admin/bookings/${id}`, {
+      method: 'DELETE',
     });
-    return response.blob();
+  },
+
+  async sendReceiptToWhatsApp(id: string): Promise<ApiResponse<string>> {
+    return apiClient<ApiResponse<string>>(`/admin/bookings/${id}/send-receipt`, {
+      method: 'POST',
+    });
   },
 };

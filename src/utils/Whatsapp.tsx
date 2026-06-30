@@ -1,47 +1,39 @@
-// src/utils/whatsapp.ts
-
-export const sendWhatsAppMessage = (phoneNumber: string, message: string) => {
+// src/utils/Whatsapp.ts
+export const sendWhatsAppMessage = (phoneNumber: string, message: string): void => {
   const encodedMessage = encodeURIComponent(message);
   window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
 };
 
-export const getBookingWhatsAppMessage = (
-  customerName: string,
-  customerPhone: string,
-  ganpatiName: string,
-  price: number,
-  bookingId: string
-) => {
-  return `🆕 NEW BOOKING REQUEST 🆕
-
-📋 Booking Details:
-🔹 Booking ID: ${bookingId}
-🔹 Ganpati: ${ganpatiName}
-🔹 Price: ₹${price.toLocaleString()}
-🔹 Advance (30%): ₹${(price * 0.3).toLocaleString()}
-
-👤 Customer Details:
-🔹 Name: ${customerName}
-🔹 Phone: ${customerPhone}
-
-📌 Status: PENDING APPROVAL`;
+export const sendWhatsAppMessages = (phoneNumbers: string[], message: string): void => {
+  const encodedMessage = encodeURIComponent(message);
+  phoneNumbers.forEach((phone) => {
+    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
+  });
 };
 
-export const getInterestWhatsAppMessage = (
+export const generateEnquiryMessage = (
+  ganpatiName: string,
+  ganpatiHeight: string,
+  ganpatiPrice: number,
   customerName: string,
   customerPhone: string,
-  ganpatiName: string,
-  price: number
-) => {
-  return `❤️ INTEREST IN GANPATI ❤️
+  customerMessage?: string
+): string => {
+  return `Ganpati Bappa Morya
 
-🪔 Ganpati Details:
-🔹 Name: ${ganpatiName}
-🔹 Price: ₹${price.toLocaleString()}
+New Enquiry
 
-👤 Customer Details:
-🔹 Name: ${customerName}
-🔹 Phone: ${customerPhone}
+Ganpati Information:
+Name: ${ganpatiName}
+Height: ${ganpatiHeight}
+Price: ₹${ganpatiPrice.toLocaleString()}
 
-📞 Please contact customer for follow up!`;
+Customer Information:
+Name: ${customerName}
+Phone: ${customerPhone}
+${customerMessage ? `Message: ${customerMessage}` : ''}
+
+Please contact soon.
+
+Siddhivinayak Arts`;
 };

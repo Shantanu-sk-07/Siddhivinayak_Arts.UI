@@ -25,11 +25,12 @@ import {
   Zoom,
   Chip,
   InputAdornment,
+  Button,
+  type ButtonProps,
 } from "@mui/material";
 import { useMemo, useState, type ReactNode, useEffect, useRef } from "react";
-import { IconTrashX, IconSearch, IconFilterOff } from "@tabler/icons-react";
-import ExportIcons from "@/utils/ExportIcons";
-import { iconMap } from "@/utils/Icons";
+import { IconTrashX, IconSearch, IconFilterOff, IconPlus } from "@tabler/icons-react";
+import { iconMap } from "@/helpers/Icons";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const ACTION_KEY = "actionbutton" as const;
@@ -55,6 +56,18 @@ export type FooterRow = {
   content: Array<{ value: ReactNode; colSpan?: number }>;
 };
 
+export type AddButtonConfig = {
+  label?: string;
+  onClick: () => void;
+  color?: ButtonProps["color"];
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  startIcon?: ReactNode;
+  endIcon?: ReactNode;
+  disabled?: boolean;
+  sx?: SxProps;
+};
+
 interface TableStyles {
   captionSx?: SxProps;
   headerSx?: SxProps;
@@ -62,9 +75,7 @@ interface TableStyles {
   paperSx?: SxProps;
 }
 
-interface UniversalTableProps<
-  T extends Record<string, unknown>,
-> extends TableStyles {
+interface UniversalTableProps<T extends Record<string, unknown>> extends TableStyles {
   data: readonly T[];
   columns: readonly Column<T>[];
   caption?: ReactNode;
@@ -72,7 +83,7 @@ interface UniversalTableProps<
   tableSize?: "small" | "medium";
   textAlign?: TableCellProps["align"];
   showSearch?: boolean;
-  showExport?: boolean;
+  addButton?: AddButtonConfig | false;
   enableCheckbox?: boolean;
   highlightColor?: string;
   loading?: boolean;
@@ -92,32 +103,14 @@ interface UniversalTableProps<
   autoUpdateDropdown?: boolean;
   onDataChange?: (rows: T[]) => void;
   actions?: Partial<Record<keyof typeof iconMap, (row: T) => void>>;
+  renderActions?: (row: T) => ReactNode;
   footerRows?: readonly FooterRow[];
   stickyHeader?: boolean;
   maxHeight?: number | string;
   showSrNo?: boolean;
   srNoLabel?: string;
-}
-
-function buildExportData<T extends Record<string, unknown>>(
-  rows: readonly T[],
-  columns: readonly Column<T>[],
-): Record<string, unknown>[] {
-  return rows.map((row, idx) =>
-    columns.reduce(
-      (acc, col) => {
-        if (
-          col.key !== ACTION_KEY &&
-          col.key !== SR_NO_KEY &&
-          col.exportable !== false
-        ) {
-          acc[col.label] = row[col.key];
-        }
-        return acc;
-      },
-      { "Sr. No.": idx + 1 } as Record<string, unknown>,
-    ),
-  );
+  rowClickable?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
 export function UniversalTable<T extends Record<string, unknown>>({
@@ -128,7 +121,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
   tableSize = "medium",
   textAlign = "left",
   showSearch = false,
-  showExport = false,
+  addButton = false,
   enableCheckbox = false,
   getRowId,
   onSelectionChange,
@@ -137,6 +130,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
   autoUpdateDropdown,
   onDataChange,
   actions,
+  renderActions,
   footerRows = [],
   captionSx,
   headerSx,
@@ -149,6 +143,8 @@ export function UniversalTable<T extends Record<string, unknown>>({
   maxHeight = "auto",
   showSrNo = true,
   srNoLabel = "Sr No",
+  rowClickable = false,
+  onRowClick,
 }: UniversalTableProps<T>) {
   const theme = useTheme();
   const [page, setPage] = useState(0);
@@ -232,25 +228,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
     [filteredData, page, rowsPerPage],
   );
 
-  // Export data with Sr. No.
-  const exportData = useMemo(
-    () => buildExportData(filteredData, columns),
-    [filteredData, columns],
-  );
-
-  const exportColumns = useMemo(() => {
-    const cols = [{ key: "Sr. No.", label: "Sr. No." }];
-    columns
-      .filter(
-        (c) =>
-          c.key !== ACTION_KEY && c.key !== SR_NO_KEY && c.exportable !== false,
-      )
-      .forEach((c) => {
-        cols.push({ key: c.label, label: c.label });
-      });
-    return cols;
-  }, [columns]);
-
   const selectedRows = data.filter((_, i) =>
     selectedIds.has(resolveRowId(_, i)),
   );
@@ -308,6 +285,13 @@ export function UniversalTable<T extends Record<string, unknown>>({
     return cols;
   }, [columns, showSrNo, srNoLabel]);
 
+  // Handle row click
+  const handleRowClick = (row: T) => {
+    if (rowClickable && onRowClick) {
+      onRowClick(row);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -324,8 +308,8 @@ export function UniversalTable<T extends Record<string, unknown>>({
           ...paperSx,
         }}
       >
-        {/* Header with Search and Export */}
-        {(showSearch || showExport) && (
+        {/* Header with Search and Add Button */}
+        {(showSearch || addButton) && (
           <Box
             sx={{
               px: { xs: 1.5, sm: 3 },
@@ -371,16 +355,31 @@ export function UniversalTable<T extends Record<string, unknown>>({
               />
             )}
 
-            {showExport && exportData.length > 0 && (
+            {addButton && (
               <Zoom in={true} timeout={500}>
-                <Box>
-                  <ExportIcons
-                    data={exportData}
-                    columns={exportColumns}
-                    filename="Export"
-                    iconSize={22}
-                  />
-                </Box>
+                <Button
+                  variant={addButton.variant || "contained"}
+                  color={addButton.color || "primary"}
+                  size={addButton.size || "medium"}
+                  onClick={addButton.onClick}
+                  disabled={addButton.disabled || false}
+                  startIcon={addButton.startIcon || <IconPlus size={20} />}
+                  endIcon={addButton.endIcon}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    "&:hover": {
+                      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                      transform: "translateY(-2px)",
+                    },
+                    transition: "all 0.3s ease",
+                    ...addButton.sx,
+                  }}
+                >
+                  {addButton.label || "Add New"}
+                </Button>
               </Zoom>
             )}
           </Box>
@@ -418,7 +417,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
             overflowX: "auto",
             overflowY: "auto",
             position: "relative",
-            // Enable horizontal scroll on all screen sizes
             "&::-webkit-scrollbar": {
               height: 8,
               width: 8,
@@ -622,8 +620,9 @@ export function UniversalTable<T extends Record<string, unknown>>({
                             ? alpha(theme.palette.primary.main, 0.08)
                             : "transparent",
                           transition: "all 0.3s ease",
-                          cursor: "pointer",
+                          cursor: rowClickable ? "pointer" : "default",
                         }}
+                        onClick={() => handleRowClick(row)}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = alpha(
                             theme.palette.grey[200],
@@ -637,7 +636,11 @@ export function UniversalTable<T extends Record<string, unknown>>({
                         }}
                       >
                         {enableCheckbox && (
-                          <TableCell padding="checkbox" sx={{ width: 48 }}>
+                          <TableCell 
+                            padding="checkbox" 
+                            sx={{ width: 48 }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Checkbox
                               checked={isSelected}
                               onChange={() => toggleRow(row, index)}
@@ -695,6 +698,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                   py: 1.5,
                                   whiteSpace: "nowrap",
                                 }}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <Select
                                   size="small"
@@ -737,20 +741,22 @@ export function UniversalTable<T extends Record<string, unknown>>({
                           }
 
                           // Actions Column
-                          if (col.key === ACTION_KEY && actions) {
+                          if (col.key === ACTION_KEY) {
                             return (
                               <TableCell
                                 key={ACTION_KEY}
                                 align="center"
                                 sx={{ whiteSpace: "nowrap", py: 1 }}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <Box
                                   display="flex"
                                   gap={0.5}
                                   justifyContent="center"
                                 >
+                                  {/* Default Actions */}
                                   {Object.entries(iconMap).map(([k, cfg]) =>
-                                    actions[k as keyof typeof iconMap] ? (
+                                    actions?.[k as keyof typeof iconMap] ? (
                                       <Tooltip
                                         key={k}
                                         title={cfg.label}
@@ -782,14 +788,14 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                       </Tooltip>
                                     ) : null,
                                   )}
+                                  {/* Custom Actions */}
+                                  {renderActions && renderActions(row)}
                                 </Box>
                               </TableCell>
                             );
                           }
 
                           // Default Column
-                          if (col.key === ACTION_KEY) return null;
-
                           return (
                             <TableCell
                               key={String(col.key)}

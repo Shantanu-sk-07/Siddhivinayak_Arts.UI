@@ -20,7 +20,7 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { useFormContext } from "react-hook-form";
-import { compressMultipleImages } from "@/utils/imageCompressor";
+import { compressMultipleImages } from "@/helpers/imageCompressor";
 import {
   showSnackbar,
 } from "@/components/uncontrolled/ToastMessage";

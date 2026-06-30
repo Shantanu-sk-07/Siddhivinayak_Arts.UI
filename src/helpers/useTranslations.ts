@@ -323,92 +323,93 @@ export const getApplyNowText = (t: TFunction) => ({
 export const getComponentTranslations = (t: TFunction) => {
   return {
     aadhaarCardField: {
-      requiredError: (label: string) => t('components.aadhaarCardField.requiredError', { label }),
-      invalidError: t('components.aadhaarCardField.invalidError')
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      invalidError: t('validation.invalid_aadhar')
     },
     checkboxGroup: {
-      requiredError: (label: string) => t('components.checkboxGroup.requiredError', { label })
+      requiredError: (label: string) => t('validation.required', { field: label })
     },
     dateTimeField: {
-      requiredError: (label: string) => t('components.dateTimeField.requiredError', { label })
+      requiredError: (label: string) => t('validation.required', { field: label })
     },
     dropdownField: {
-      requiredError: (label: string) => t('components.dropdownField.requiredError', { label }),
-      emptyError: t('components.dropdownField.emptyError')
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      emptyError: t('validation.required')
     },
     emailField: {
-      requiredError: (label: string) => t('components.emailField.requiredError', { label }),
-      invalidFormat: t('components.emailField.invalidFormat'),
-      invalidDomain: t('components.emailField.invalidDomain')
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      invalidFormat: t('validation.invalid_email'),
+      invalidDomain: t('validation.invalid_email_domain')
     },
     fileUpload: {
-      requiredError: (label: string) => t('components.fileUpload.requiredError', { label }),
-      invalidType: (types: string) => t('components.fileUpload.invalidType', { types }),
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      invalidType: (types: string) => t('validation.invalid_file_type', { types }),
       sizeLimit: (maxSize: number, selectedSize: number) => 
-        t('components.fileUpload.sizeLimit', { 
+        t('validation.file_too_large', { 
           maxSize, 
           selectedSize: Math.round(selectedSize) 
         })
     },
     mobileField: {
-      requiredError: (label: string) => t('components.mobileField.requiredError', { label }),
-      invalidFormat: t('components.mobileField.invalidFormat'),
-      maxDigits: t('components.mobileField.maxDigits'),
-      minDigits: t('components.mobileField.minDigits')
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      invalidFormat: t('validation.invalid_phone'),
+      maxDigits: t('validation.max_length', { max: 10 }),
+      minDigits: t('validation.min_length', { min: 10 })
     },
     numericField: {
-      requiredError: (label: string) => t('components.numericField.requiredError', { label }),
-      invalidNumber: (label: string) => t('components.numericField.invalidNumber', { label }),
-      onlyNumbers: (label: string) => t('components.numericField.onlyNumbers', { label }),
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      invalidNumber: (label: string) => t('validation.invalid_number', { field: label }),
+      onlyNumbers: (label: string) => t('validation.only_numbers', { field: label }),
       minValue: (label: string, min: number | string) => 
-        t('components.numericField.minValue', { 
-          label, 
+        t('validation.min_value', { 
+          field: label, 
           min: typeof min === 'number' ? min.toString() : min 
         }),
       maxValue: (label: string, max: number | string) => 
-        t('components.numericField.maxValue', { 
-          label, 
+        t('validation.max_value', { 
+          field: label, 
           max: typeof max === 'number' ? max.toString() : max 
         }),
       decimalLimit: (label: string, digits: number) => 
-        t('components.numericField.decimalLimit', { label, digits })
+        t('validation.decimal_limit', { field: label, digits })
     },
     passwordField: {
-      requiredError: (label: string) => t('components.passwordField.requiredError', { label }),
-      minLength: (min: number) => t('components.passwordField.minLength', { min }),
-      maxLength: (max: number) => t('components.passwordField.maxLength', { max }),
-      caseRequirement: t('components.passwordField.caseRequirement'),
-      numberRequirement: t('components.passwordField.numberRequirement'),
-      specialCharRequirement: t('components.passwordField.specialCharRequirement'),
-      mismatch: t('components.passwordField.mismatch'),
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      minLength: (min: number) => t('validation.min_length', { min }),
+      maxLength: (max: number) => t('validation.max_length', { max }),
+      caseRequirement: t('validation.password_case'),
+      numberRequirement: t('validation.password_number'),
+      specialCharRequirement: t('validation.password_special'),
+      mismatch: t('validation.password_mismatch'),
       strength: {
-        weak: t('components.passwordField.strength.weak'),
-        medium: t('components.passwordField.strength.medium'),
-        strong: t('components.passwordField.strength.strong'),
-        veryStrong: t('components.passwordField.strength.veryStrong')
+        weak: 'Weak',
+        medium: 'Medium',
+        strong: 'Strong',
+        veryStrong: 'Very Strong'
       }
     },
     radioField: {
-      requiredError: (label: string) => t('components.radioField.requiredError', { label })
+      requiredError: (label: string) => t('validation.required', { field: label })
     },
     searchField: {
-      requiredError: (label: string) => t('components.searchField.requiredError', { label })
+      requiredError: (label: string) => t('validation.required', { field: label })
     },
     textInputField: {
-      requiredError: (label: string) => t('components.textInputField.requiredError', { label }),
-      minLength: (min: number) => t('components.textInputField.minLength', { min }),
-      maxLength: (max: number) => t('components.textInputField.maxLength', { max }),
+      requiredError: (label: string) => t('validation.required', { field: label }),
+      minLength: (min: number) => t('validation.min_length', { min }),
+      maxLength: (max: number) => t('validation.max_length', { max }),
       validation: {
-        alphanumeric: t('components.textInputField.validation.alphanumeric'),
-        alphabets: t('components.textInputField.validation.alphabets'),
-        numbers: t('components.textInputField.validation.numbers'),
-        email: t('components.textInputField.validation.email'),
-        textarea: t('components.textInputField.validation.textarea')
+        alphanumeric: t('validation.only_alphanumeric'),
+        alphabets: t('validation.only_alphabets'),
+        numbers: t('validation.only_numbers'),
+        email: t('validation.invalid_email'),
+        textarea: t('validation.invalid_format'),
+        string: t('validation.only_letters'),
+        all: 'All characters are allowed'
       }
     }
   };
 };
-
 /**
  * login page
  */

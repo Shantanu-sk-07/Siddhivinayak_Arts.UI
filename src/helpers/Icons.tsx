@@ -1,0 +1,185 @@
+import { 
+  Download, 
+  Upload, 
+  Print, 
+  RestartAlt, 
+  ContentCopy, 
+  Image, 
+  CheckCircle, 
+  Payment as PaymentIcon, 
+  QrCode,
+  Receipt as ReceiptIcon,
+  Save as SaveIcon,
+  Close as CloseIcon,
+  Refresh as RefreshIcon,
+  WhatsApp as WhatsAppIcon,
+  CalendarToday as CalendarIcon,
+  Person as PersonIcon,
+   LocationOn as LocationIcon,
+  Email as EmailIcon,
+  Home as HomeIcon,
+  Category as CategoryIcon,
+  Dashboard as DashboardIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  Menu as MenuIcon,
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  MoreVert as MoreIcon,
+  Check as CheckIcon,
+  Clear as ClearIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
+  Help as HelpIcon,
+  Lock as LockIcon,
+  Security as SecurityIcon,
+  Notifications as NotificationsIcon,
+  AccountCircle as AccountIcon,
+  Star as StarIcon,
+  Favorite as FavoriteIcon,
+  FavoriteBorder as FavoriteBorderIcon,
+  ShoppingCart as CartIcon,
+  Store as StoreIcon,
+  LocalOffer as TagIcon,
+  CreditCard as CreditCardIcon,
+  AccountBalance as BankIcon,
+  History as HistoryIcon,
+  Timeline as TimelineIcon,
+  BarChart as ChartIcon,
+  FileCopy as FileCopyIcon,
+  GetApp as GetAppIcon,
+  Publish as PublishIcon,
+  DeleteSweep as DeleteAllIcon,
+  DoneAll as DoneAllIcon,
+  RemoveDone as UndoIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+  KeyboardArrowUp as ArrowUpIcon,
+  KeyboardArrowLeft as ArrowLeftIcon,
+  KeyboardArrowRight as ArrowRightIcon,
+  Sort as SortIcon,
+  EventNote as EventNoteIcon,
+  AttachMoney as MoneyIcon,
+  CheckBox as CheckBoxIcon,
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  RadioButtonChecked as RadioButtonCheckedIcon,
+  RadioButtonUnchecked as RadioButtonUncheckedIcon
+} from "@mui/icons-material";
+import { 
+  IconEyeSearch, 
+  IconPencilMinus, 
+  IconShare3, 
+  IconCircleCheck, 
+  IconCircleX, 
+  IconLibraryPlus, 
+  IconSend, 
+  IconPhone, 
+  IconTrashX 
+} from "@tabler/icons-react";
+
+export const iconMap = {
+  // ========== CRUD Operations ==========
+  view: { icon: <IconEyeSearch stroke={2} />, label: "View Details", color: "#1976d2" },
+  edit: { icon: <IconPencilMinus stroke={2} />, label: "Edit", color: "#2e7d32" },
+  delete: { icon: <IconTrashX stroke={2} />, label: "Delete", color: "#d32f2f" },
+  add: { icon: <IconLibraryPlus stroke={2} />, label: "Add New", color: "#d32f2f" },
+  save: { icon: <SaveIcon />, label: "Save", color: "#1976d2" },
+  close: { icon: <CloseIcon />, label: "Close", color: "#d32f2f" },
+  refresh: { icon: <RefreshIcon />, label: "Refresh", color: "#1976d2" },
+  reset: { icon: <RestartAlt />, label: "Reset", color: "#ed6c02" },
+  copy: { icon: <ContentCopy />, label: "Copy", color: "#2e7d32" },
+  
+  // ========== File Operations ==========
+  download: { icon: <Download />, label: "Download", color: "#2e7d32" },
+  upload: { icon: <Upload />, label: "Upload", color: "#ed6c02" },
+  print: { icon: <Print />, label: "Print", color: "#000000" },
+  fileCopy: { icon: <FileCopyIcon />, label: "Copy File", color: "#6b7280" },
+  getApp: { icon: <GetAppIcon />, label: "Download File", color: "#1976d2" },
+  publish: { icon: <PublishIcon />, label: "Upload File", color: "#ed6c02" },
+  deleteAll: { icon: <DeleteAllIcon />, label: "Delete All", color: "#d32f2f" },
+  
+  // ========== Communication ==========
+  send: { icon: <IconSend stroke={2} />, label: "Send WhatsApp", color: "#25D366" },
+  whatsapp: { icon: <WhatsAppIcon />, label: "WhatsApp", color: "#25D366" },
+  phone: { icon: <IconPhone stroke={2} />, label: "Call", color: "#d32f2f" },
+  share: { icon: <IconShare3 stroke={2} />, label: "Share", color: "#d32f2f" },
+  email: { icon: <EmailIcon />, label: "Email", color: "#2e7d32" },
+  
+  // ========== Approval/Status ==========
+  approve: { icon: <IconCircleCheck stroke={2} />, label: "Approve", color: "#2e7d32" },
+  reject: { icon: <IconCircleX stroke={2} />, label: "Reject", color: "#d32f2f" },
+  complete: { icon: <CheckCircle />, label: "Complete", color: "#4caf50" },
+  check: { icon: <CheckIcon />, label: "Check", color: "#4caf50" },
+  clear: { icon: <ClearIcon />, label: "Clear", color: "#d32f2f" },
+  doneAll: { icon: <DoneAllIcon />, label: "Done All", color: "#4caf50" },
+  undo: { icon: <UndoIcon />, label: "Undo", color: "#ff9800" },
+  
+  // ========== Booking Related ==========
+  booking: { icon: <EventNoteIcon />, label: "Booking", color: "#1976d2" },
+  confirmBooking: { icon: <CheckCircle />, label: "Confirm Booking", color: "#4caf50" },
+  receipt: { icon: <ReceiptIcon />, label: "Receipt", color: "#1976d2" },
+  payment: { icon: <PaymentIcon />, label: "Payment", color: "#9c27b0" },
+  money: { icon: <MoneyIcon />, label: "Payment Amount", color: "#ff9800" },
+  history: { icon: <HistoryIcon />, label: "Payment History", color: "#9c27b0" },
+  timeline: { icon: <TimelineIcon />, label: "Timeline", color: "#ff9800" },
+  calendar: { icon: <CalendarIcon />, label: "Calendar", color: "#1976d2" },
+  
+  // ========== Navigation ==========
+  home: { icon: <HomeIcon />, label: "Home", color: "#1976d2" },
+  dashboard: { icon: <DashboardIcon />, label: "Dashboard", color: "#1976d2" },
+  category: { icon: <CategoryIcon />, label: "Category", color: "#ff9800" },
+  settings: { icon: <SettingsIcon />, label: "Settings", color: "#6b7280" },
+  logout: { icon: <LogoutIcon />, label: "Logout", color: "#d32f2f" },
+  menu: { icon: <MenuIcon />, label: "Menu", color: "#6b7280" },
+  search: { icon: <SearchIcon />, label: "Search", color: "#6b7280" },
+  filter: { icon: <FilterIcon />, label: "Filter", color: "#6b7280" },
+  more: { icon: <MoreIcon />, label: "More Options", color: "#6b7280" },
+  
+  // ========== User Related ==========
+  user: { icon: <PersonIcon />, label: "User", color: "#1976d2" },
+  account: { icon: <AccountIcon />, label: "Account", color: "#1976d2" },
+  location: { icon: <LocationIcon />, label: "Location", color: "#d32f2f" },
+  
+  // ========== Product/Store ==========
+  image: { icon: <Image />, label: "Images", color: "#6b7280" },
+  qr: { icon: <QrCode />, label: "QR Code", color: "#ff9800" },
+  cart: { icon: <CartIcon />, label: "Cart", color: "#ff9800" },
+  store: { icon: <StoreIcon />, label: "Store", color: "#4caf50" },
+  tag: { icon: <TagIcon />, label: "Tag", color: "#ff5722" },
+  creditCard: { icon: <CreditCardIcon />, label: "Credit Card", color: "#9c27b0" },
+  bank: { icon: <BankIcon />, label: "Bank", color: "#1976d2" },
+  
+  // ========== Security ==========
+  lock: { icon: <LockIcon />, label: "Lock", color: "#d32f2f" },
+  security: { icon: <SecurityIcon />, label: "Security", color: "#4caf50" },
+  notifications: { icon: <NotificationsIcon />, label: "Notifications", color: "#ff9800" },
+  
+  // ========== Info ==========
+  warning: { icon: <WarningIcon />, label: "Warning", color: "#ff9800" },
+  info: { icon: <InfoIcon />, label: "Info", color: "#1976d2" },
+  help: { icon: <HelpIcon />, label: "Help", color: "#9c27b0" },
+  
+  // ========== Favorite ==========
+  favorite: { icon: <FavoriteIcon />, label: "Favorite", color: "#d32f2f" },
+  favoriteBorder: { icon: <FavoriteBorderIcon />, label: "Favorite Border", color: "#6b7280" },
+  star: { icon: <StarIcon />, label: "Star", color: "#ff9800" },
+  
+  // ========== Navigation Arrows ==========
+  arrowForward: { icon: <ArrowForwardIcon />, label: "Forward", color: "#1976d2" },
+  arrowBack: { icon: <ArrowBackIcon />, label: "Back", color: "#1976d2" },
+  arrowDown: { icon: <ArrowDownIcon />, label: "Down", color: "#6b7280" },
+  arrowUp: { icon: <ArrowUpIcon />, label: "Up", color: "#6b7280" },
+  arrowLeft: { icon: <ArrowLeftIcon />, label: "Left", color: "#6b7280" },
+  arrowRight: { icon: <ArrowRightIcon />, label: "Right", color: "#6b7280" },
+  sort: { icon: <SortIcon />, label: "Sort", color: "#6b7280" },
+  
+  // ========== Checkbox/Radio ==========
+  checkbox: { icon: <CheckBoxIcon />, label: "Checked", color: "#1976d2" },
+  checkboxOutline: { icon: <CheckBoxOutlineBlankIcon />, label: "Unchecked", color: "#6b7280" },
+  radioChecked: { icon: <RadioButtonCheckedIcon />, label: "Selected", color: "#1976d2" },
+  radioUnchecked: { icon: <RadioButtonUncheckedIcon />, label: "Not Selected", color: "#6b7280" },
+  
+  // ========== Chart ==========
+  chart: { icon: <ChartIcon />, label: "Chart", color: "#4caf50" },
+};

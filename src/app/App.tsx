@@ -1,17 +1,33 @@
-import * as React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-
+import { ThemeProvider, createTheme } from '@mui/material';
 import AppRoutes from '@/routes/AppRoutes';
-import { SnackbarProvider } from '@/components/controlled/SnackbarProvider';
+import './index.css';
 
-const App: React.FC = () => {
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#b71c1c',
+    },
+    secondary: {
+      main: '#d32f2f',
+    },
+    error: {
+      main: '#d32f2f',
+    },
+  },
+  typography: {
+    fontFamily: '"Noto Sans Devanagari", "Segoe UI", "Roboto", sans-serif',
+  },
+});
+
+function App() {
   return (
-    <SnackbarProvider>
+      <ThemeProvider theme={theme}>
         <BrowserRouter>
-          <AppRoutes />
+            <AppRoutes />
         </BrowserRouter>
-    </SnackbarProvider>
+      </ThemeProvider>
   );
-};
+}
 
 export default App;
