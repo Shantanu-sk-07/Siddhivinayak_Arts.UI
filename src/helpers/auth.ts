@@ -12,14 +12,14 @@ export const FRONTEND_URLS = {
 };
 
 export const getApiBaseUrl = (): string => {
-  // const env = import.meta.env.VITE_API_ENV || 'production';
-   const env = import.meta.env.VITE_API_ENV || 'local';
+  const env = import.meta.env.VITE_API_ENV || 'production';
+  //  const env = import.meta.env.VITE_API_ENV || 'local';
   return env === 'local' ? API_BASE_URLS.local : API_BASE_URLS.production;
 };
 
 export const getFrontendUrl = (): string => {
-  // const env = import.meta.env.VITE_API_ENV || 'production';
-   const env = import.meta.env.VITE_API_ENV || 'local';
+  const env = import.meta.env.VITE_API_ENV || 'production';
+  //  const env = import.meta.env.VITE_API_ENV || 'local';
   return env === 'local' ? FRONTEND_URLS.local : FRONTEND_URLS.production;
 };
 
