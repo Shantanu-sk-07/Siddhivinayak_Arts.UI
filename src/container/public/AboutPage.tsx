@@ -2,7 +2,7 @@
 import { Container, Typography, Box, Grid, Paper, Avatar, Divider, useTheme, alpha, styled, Button, IconButton } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Phone, Email, LocationOn, CalendarToday, Star, QrCode, WhatsApp, Facebook, Instagram} from '@mui/icons-material';
+import { Phone, Email, LocationOn, CalendarToday, Star, QrCode, WhatsApp, Facebook, Instagram } from '@mui/icons-material';
 import { config } from '@/constants/config';
 
 const GlassCard = styled(Paper)(({ theme }) => ({
@@ -80,13 +80,31 @@ export default function AboutPage() {
                   </Typography>
                   <Divider sx={{ my: 2 }} />
                   <Box display="flex" justifyContent="center" gap={1}>
-                    <IconButton sx={{ color: '#25D366' }}>
+                    <IconButton 
+                      component="a"
+                      href={`https://wa.me/${config.ADMIN_WHATSAPP}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#25D366' }}
+                    >
                       <WhatsApp />
                     </IconButton>
-                    <IconButton sx={{ color: '#1877F2' }}>
+                    <IconButton 
+                      component="a"
+                      href="https://www.facebook.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#1877F2' }}
+                    >
                       <Facebook />
                     </IconButton>
-                    <IconButton sx={{ color: '#E4405F' }}>
+                    <IconButton 
+                      component="a"
+                      href="https://www.instagram.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#E4405F' }}
+                    >
                       <Instagram />
                     </IconButton>
                   </Box>

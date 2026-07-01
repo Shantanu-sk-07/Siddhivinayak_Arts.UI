@@ -25,6 +25,7 @@ import {
   showSnackbar,
 } from "@/components/uncontrolled/ToastMessage";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface PhotoUploadProps {
   name: string;
@@ -65,6 +66,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
   maxHeight,
   compress = true,
 }) => {
+  const { t } = useTranslation();
   const {
     setValue,
     watch,
@@ -188,9 +190,9 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
     for (const file of files) {
       if (file.size > maxSizeBytes) {
-        errors.push(`${file.name}: Max ${maxSizeMB}MB file allowed`);
+        errors.push(`${file.name}: ${t('file_upload.file_too_large', { maxSizeMB })}`);
       } else if (!accept.split(",").includes(file.type)) {
-        errors.push(`${file.name}: Unsupported file format`);
+        errors.push(`${file.name}: ${t('validation.invalid_file_type')}`);
       } else {
         const dimensionCheck = await validateImageDimensions(file);
         if (!dimensionCheck.valid && dimensionCheck.error) {
@@ -202,7 +204,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
     }
     return { valid, errors };
   },
-  [maxSizeBytes, maxSizeMB, accept, validateImageDimensions]
+  [maxSizeBytes, maxSizeMB, accept, validateImageDimensions, t]
 );
 
   const processFiles = useCallback(
@@ -220,13 +222,13 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
     const currentFiles = getSafePhotosArray();
     const availableSlots = maxFiles - currentFiles.length;
     if (availableSlots <= 0) {
-      showSnackbar("warning", `Maximum ${maxFiles} images only allowed`);
+      showSnackbar("warning", t('file_upload.max_images', { maxFiles }));
       return;
     }
     
     const filesToAdd = files.slice(0, availableSlots);
     if (files.length > availableSlots) {
-      showSnackbar("warning", `Maximum ${maxFiles} images only allowed`);
+      showSnackbar("warning", t('file_upload.max_images', { maxFiles }));
     }
     
     setUploading(true);
@@ -251,10 +253,10 @@ const updatedFiles = [...currentFiles, ...processedFiles];
         shouldDirty: true,
       });
       setUploadProgress(100);
-      showSnackbar("success", `${processedFiles.length} image(s) uploaded${compress ? " and compressed" : ""}`);
+      showSnackbar("success", t('file_upload.uploaded_with_compression', { count: processedFiles.length }));
     } catch (error) {
       console.error("Compression error:", error);
-      showSnackbar("error", compress ? "Failed to compress images" : "Failed to upload images");
+      showSnackbar("error", compress ? t('file_upload.compress_failed') : t('file_upload.upload_failed'));
     } finally {
       setTimeout(() => {
         setUploading(false);
@@ -263,7 +265,7 @@ const updatedFiles = [...currentFiles, ...processedFiles];
     }
   },
 
-   [getSafePhotosArray, maxFiles, name, setValue, targetSizeKB, validateImageDimensions, compress]);
+   [getSafePhotosArray, maxFiles, name, setValue, targetSizeKB, validateImageDimensions, compress, t]);
 
 
  const handleFileChange = useCallback(
@@ -347,9 +349,9 @@ const updatedFiles = [...currentFiles, ...processedFiles];
         removed.split("/").pop()?.split("?")[0] || "Image";
     }
 
-    showSnackbar("error", `${fileName} deleted`);
+    showSnackbar("error", t('file_upload.delete_success', { fileName }));
   },
-  [getSafePhotosArray, name, setValue],
+  [getSafePhotosArray, name, setValue, t]
 );
 
   const handleUploadClick = useCallback((): void => {
@@ -369,13 +371,13 @@ const updatedFiles = [...currentFiles, ...processedFiles];
 
   register(name, {
     required: required
-      ? `${label || placeholder || "Image"} is required`
+      ? `${label || placeholder || "Image"} ${t('validation.required')}`
       : false,
     validate: {
       maxFiles: (value) => {
         const arr = value as (File | string)[] | undefined;
         if (!arr) return true;
-        return arr.length <= maxFiles || `Maximum ${maxFiles} images allowed`;
+        return arr.length <= maxFiles || t('file_upload.max_images', { maxFiles });
       },
     },
   });
@@ -480,7 +482,7 @@ const updatedFiles = [...currentFiles, ...processedFiles];
                       fontSize: "0.7rem",
                     }}
                   >
-                    {dragActive ? "Drop here" : placeholder || "Upload images"}
+                    {dragActive ? t('file_upload.upload_images') : placeholder || t('file_upload.upload_images')}
                   </Typography>
                   <Typography
                     variant="caption"
@@ -513,7 +515,7 @@ const updatedFiles = [...currentFiles, ...processedFiles];
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.15 }}
                       >
-                        <Tooltip title="Click to enlarge" arrow>
+                        <Tooltip title={t('file_upload.click_to_enlarge')} arrow>
                           <Box
                             sx={{
                               position: "relative",
@@ -636,7 +638,7 @@ const updatedFiles = [...currentFiles, ...processedFiles];
                         variant="caption"
                         sx={{ color: "#16a34a", fontSize: "0.6rem" }}
                       >
-                        Optimized (&lt;{targetSizeKB}KB)
+                        {t('file_upload.optimized', { targetSizeKB })}
                       </Typography>
                     </Box>
                   </Fade>
@@ -707,7 +709,7 @@ const updatedFiles = [...currentFiles, ...processedFiles];
                   boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
                 }}
               />
-              <Tooltip title="Close" arrow>
+              <Tooltip title={t('file_upload.close')} arrow>
                 <IconButton
                   onClick={handleCloseEnlarged}
                   sx={{

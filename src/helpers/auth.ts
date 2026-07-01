@@ -7,17 +7,19 @@ export const API_BASE_URLS = {
 };
 
 export const FRONTEND_URLS = {
-  local: 'http://localhost:5173',
+  local: 'http://localhost:2929',
   production: 'https://siddhivinayak-arts.onrender.com'
 };
 
 export const getApiBaseUrl = (): string => {
-  const env = import.meta.env.VITE_API_ENV || 'production';
+  // const env = import.meta.env.VITE_API_ENV || 'production';
+   const env = import.meta.env.VITE_API_ENV || 'local';
   return env === 'local' ? API_BASE_URLS.local : API_BASE_URLS.production;
 };
 
 export const getFrontendUrl = (): string => {
-  const env = import.meta.env.VITE_API_ENV || 'production';
+  // const env = import.meta.env.VITE_API_ENV || 'production';
+   const env = import.meta.env.VITE_API_ENV || 'local';
   return env === 'local' ? FRONTEND_URLS.local : FRONTEND_URLS.production;
 };
 

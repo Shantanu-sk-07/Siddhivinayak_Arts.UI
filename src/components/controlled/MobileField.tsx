@@ -1,6 +1,6 @@
 import { TextField, InputAdornment, type SxProps, type Theme, type TextFieldProps } from '@mui/material';
 import { Controller, useFormContext } from 'react-hook-form';
-import { mobileRegex, SanitizeMobileRegex } from '@/utils/RegexPattern';
+import { sanitizePhoneNumber, validatePhoneNumber } from '@/utils/RegexPattern';
 import { useTranslation } from 'react-i18next';
 import { getComponentTranslations } from '@/helpers/useTranslations';
 
@@ -27,37 +27,41 @@ const MobileField: React.FC<MobileFieldProps> = ({ label, name, required = false
       rules={{
         required: required ? trans.mobileField.requiredError(label) : undefined,
         validate: (value: string = '') => {
-          if (!value && required) return label ? `${label} is required` : 'Field is required';
-          const sanitized = value.replace(/\D/g, '');
-          if (!mobileRegex.test(value)) return trans.mobileField.invalidFormat;
-          if (sanitized.length > 10) return trans.mobileField.maxDigits;
-          if (sanitized.length < 10) return trans.mobileField.minDigits;
+          if (!value && required) return trans.mobileField.requiredError(label);
+          if (!value) return true;
+          const result = validatePhoneNumber(value);
+          if (!result.valid) {
+            return trans.mobileField.invalidFormat;
+          }
           return true;
         }
       }}
-      render={({ field }) => (
-        <TextField
-          {...field}
-          {...rest}
-          fullWidth
-          label={label}
-          value={field.value || ''}
-          error={!!errors[name]}
-          helperText={String(errors[name]?.message || ' ')}
-          onChange={(e) => {
-            const input = SanitizeMobileRegex(e.target.value);
-            const digitsOnly = input.replace(/\D/g, '');
-            if (digitsOnly.length <= 10) {
-              field.onChange(input);
-            }
-          }}
-          InputProps={{
-            startAdornment: <InputAdornment position="start">+91</InputAdornment>
-          }}
-          required={required}
-          sx={{ '& .MuiInputLabel-asterisk': { color: 'error.main' }, ...sx }}
-        />
-      )}
+      render={({ field }) => {
+        const displayValue = field.value || '';
+        const sanitizedValue = sanitizePhoneNumber(displayValue);
+        
+        return (
+          <TextField
+            {...field}
+            {...rest}
+            fullWidth
+            label={label}
+            value={sanitizedValue}
+            error={!!errors[name]}
+            helperText={String(errors[name]?.message || ' ')}
+            onChange={(e) => {
+              const rawInput = e.target.value;
+              const cleaned = sanitizePhoneNumber(rawInput);
+              field.onChange(cleaned);
+            }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start">+91</InputAdornment>
+            }}
+            required={required}
+            sx={{ '& .MuiInputLabel-asterisk': { color: 'error.main' }, ...sx }}
+          />
+        );
+      }}
     />
   );
 };

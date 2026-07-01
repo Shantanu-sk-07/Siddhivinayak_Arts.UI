@@ -109,7 +109,7 @@ export default function AdminDashboard() {
         bookingData = bookingsRes.success && bookingsRes.data ? bookingsRes.data : [];
       } catch (error) {
         console.error('Error fetching data:', error);
-        showSnackbar('error', 'Failed to load dashboard data');
+        showSnackbar('error', t('dashboard.load_error'));
       }
 
       setGanpatiList(ganpatiData);
@@ -133,11 +133,11 @@ export default function AdminDashboard() {
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
-      showSnackbar('error', 'Failed to load dashboard');
+      showSnackbar('error', t('dashboard.load_error'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();
@@ -360,8 +360,11 @@ export default function AdminDashboard() {
             🌺 गणपती बाप्पा मोरया 🌺
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Total {stats.totalGanpati} Ganpati idols available. {stats.totalBookings} bookings confirmed.
-            {stats.totalCustomers} happy customers served.
+            {t('dashboard.footer_message', {
+              totalGanpati: stats.totalGanpati,
+              totalBookings: stats.totalBookings,
+              totalCustomers: stats.totalCustomers
+            })}
           </Typography>
         </GlassPaper>
       </Container>

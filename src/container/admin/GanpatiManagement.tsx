@@ -3,14 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   Grid, Switch, FormControlLabel, Chip, IconButton, useTheme, alpha, styled,
-  LinearProgress, Avatar
-  } from '@mui/material';
+  LinearProgress, Avatar, useMediaQuery
+} from '@mui/material';
 import {
   Close as CloseIcon, Edit as EditIcon, Delete as DeleteIcon,
   Category as CategoryIcon, Height as HeightIcon, AttachMoney as MoneyIcon,
   Palette as PaletteIcon, Inventory as InventoryIcon,
   Image as ImageIcon
-  } from '@mui/icons-material';
+} from '@mui/icons-material';
 import { useForm, FormProvider } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -22,17 +22,14 @@ import DropdownField from '@/components/controlled/DropdownField';
 import PhotoUpload from '@/components/controlled/PhotoUpload';
 import Paper from '@mui/material/Paper';
 import { adminService } from '@/services/AdminService';
-import { GanpatiResponseDto, GanpatiFormData } from '@/types/MurtiType';
-
-interface GanpatiRecord extends Record<string, unknown> {
-  id: string;
-  name: string;
-  height: string;
-  price: number;
-  availableSlots: number;
-  isActive: boolean;
-  images: string[];
-}
+import {
+  GanpatiResponseDto,
+  GanpatiFormData,
+  GanpatiRecord,
+  heightOptions,
+  materialOptions,
+  colorOptions
+} from '@/types/MurtiType';
 
 const GlassPaper = styled(Paper)(({ theme }) => ({
   background: alpha(theme.palette.common.white, 0.92),
@@ -43,11 +40,11 @@ const GlassPaper = styled(Paper)(({ theme }) => ({
 }));
 
 const ViewDetailRow = ({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) => (
-  <Box sx={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: 1.5, 
-    py: 1, 
+  <Box sx={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1.5,
+    py: 1,
     borderBottom: '1px solid #f0f0f0',
     '&:last-child': { borderBottom: 'none' }
   }}>
@@ -61,31 +58,11 @@ const ViewDetailRow = ({ label, value, icon }: { label: string; value: string | 
   </Box>
 );
 
-const heightOptions = [
-  { value: '2ft', label: '2 Feet' },
-  { value: '3ft', label: '3 Feet' },
-  { value: '4ft', label: '4 Feet' },
-  { value: '5ft', label: '5 Feet' },
-  { value: '6ft', label: '6 Feet' },
-  { value: '7ft', label: '7 Feet' },
-];
-
-const materialOptions = [
-  { value: 'Eco Friendly', label: 'Eco Friendly' },
-  { value: 'Clay', label: 'Clay' },
-  { value: 'Plaster of Paris', label: 'Plaster of Paris' },
-];
-
-const colorOptions = [
-  { value: 'Traditional', label: 'Traditional' },
-  { value: 'Modern', label: 'Modern' },
-  { value: 'Royal', label: 'Royal' },
-  { value: 'Premium', label: 'Premium' },
-];
-
 export default function GanpatiManagement() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [ganpatiList, setGanpatiList] = useState<GanpatiResponseDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
@@ -173,7 +150,7 @@ export default function GanpatiManagement() {
   };
 
   const handleDelete = async (ganpati: GanpatiResponseDto): Promise<void> => {
-    const confirmed = await showConfirmation(t('msg.delete_confirm'), 'Confirm');
+    const confirmed = await showConfirmation(t('msg.delete_confirm'), t('common.confirm_action'));
     if (confirmed) {
       try {
         const response = await adminService.deleteGanpati(ganpati.id);
@@ -245,13 +222,13 @@ export default function GanpatiManagement() {
   const columns: Column<GanpatiRecord>[] = [
     {
       key: 'images',
-      label: 'Image',
+      label: t('ganpati.image'),
       render: (row) => (
         <Avatar
           src={row.images?.[0] || '/placeholder.jpg'}
-          sx={{ 
-            width: 50, 
-            height: 50, 
+          sx={{
+            width: { xs: 35, sm: 50 },
+            height: { xs: 35, sm: 50 },
             borderRadius: 2,
             cursor: 'pointer',
             '&:hover': { transform: 'scale(1.05)' }
@@ -266,14 +243,14 @@ export default function GanpatiManagement() {
     {
       key: 'name',
       label: t('ganpati.name'),
-      render: (row) => <Typography fontWeight={600}>{row.name}</Typography>,
+      render: (row) => <Typography fontWeight={600} sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>{row.name}</Typography>,
     },
     { key: 'height', label: t('ganpati.height') },
     {
       key: 'price',
       label: t('ganpati.price'),
       render: (row) => (
-        <Typography color="primary" fontWeight={600}>
+        <Typography color="primary" fontWeight={600} sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
           ₹{row.price.toLocaleString()}
         </Typography>
       ),
@@ -286,6 +263,7 @@ export default function GanpatiManagement() {
           label={row.availableSlots}
           size="small"
           color={row.availableSlots > 0 ? 'success' : 'error'}
+          sx={{ height: { xs: 20, sm: 24 }, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
         />
       ),
     },
@@ -297,6 +275,7 @@ export default function GanpatiManagement() {
           label={row.isActive ? t('ganpati.active') : t('ganpati.inactive')}
           color={row.isActive ? 'success' : 'default'}
           size="small"
+          sx={{ height: { xs: 20, sm: 24 }, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
         />
       ),
     },
@@ -315,7 +294,7 @@ export default function GanpatiManagement() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
+      <Box sx={{ p: { xs: 1, sm: 1.5, md: 3 } }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
           <Typography
             variant="h4"
@@ -325,6 +304,7 @@ export default function GanpatiManagement() {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               color: 'transparent',
+              fontSize: { xs: '1.3rem', sm: '1.8rem', md: '2.125rem' }
             }}
           >
             {t('admin.ganpati')}
@@ -366,12 +346,21 @@ export default function GanpatiManagement() {
           />
         </GlassPaper>
 
+        {/* Add/Edit Dialog */}
         <Dialog
           open={dialogOpen}
           onClose={() => !submitting && setDialogOpen(false)}
           maxWidth="md"
           fullWidth
-          PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}
+          fullScreen={isMobile}
+          PaperProps={{
+            sx: {
+              borderRadius: { xs: 0, sm: 4 },
+              overflow: 'hidden',
+              margin: { xs: 0, sm: 'auto' },
+              maxHeight: { xs: '100vh', sm: '90vh' },
+            }
+          }}
         >
           <DialogTitle
             sx={{
@@ -380,14 +369,14 @@ export default function GanpatiManagement() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              py: 2.5,
-              px: 3,
+              py: { xs: 1.5, sm: 2.5 },
+              px: { xs: 1.5, sm: 3 },
             }}
           >
             <Box display="flex" alignItems="center" gap={1.5}>
-              <CategoryIcon />
-              <Typography variant="h6" fontWeight={700}>
-                {editingGanpati ? 'Edit Ganpati' : 'Add New Ganpati'}
+              <CategoryIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '0.95rem', sm: '1.25rem' } }}>
+                {editingGanpati ? t('ganpati.edit') : t('ganpati.add_new')}
               </Typography>
             </Box>
             <IconButton onClick={() => setDialogOpen(false)} sx={{ color: 'white' }}>
@@ -395,24 +384,29 @@ export default function GanpatiManagement() {
             </IconButton>
           </DialogTitle>
 
-          <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6' }}>
+          <DialogContent sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: '#faf8f6' }}>
             <FormProvider {...methods}>
               <form id="ganpati-form" onSubmit={handleSubmit(onSubmit)}>
-                <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                  <Grid container spacing={2}>
+                <Paper sx={{
+                  p: { xs: 1.5, sm: 2, md: 3 },
+                  borderRadius: 3,
+                  bgcolor: 'white',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)'
+                }}>
+                  <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <TextInputField
                         name="name"
-                        label="Ganpati Name"
+                        label={t('ganpati.name')}
                         required
-                        placeholder="Enter Ganpati name"
-                        size="small"
+                        placeholder={t('ganpati.enter_name')}
+                        size={isMobile ? "small" : "small"}
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="height"
-                        label="Height"
+                        label={t('ganpati.height')}
                         options={heightOptions}
                         required
                         size="small"
@@ -421,18 +415,18 @@ export default function GanpatiManagement() {
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <NumericField
                         name="price"
-                        label="Price (₹)"
+                        label={t('ganpati.price')}
                         required
                         min={0}
                         max={1000000000}
-                        placeholder="Enter price"
+                        placeholder={t('ganpati.enter_price')}
                         size="small"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <NumericField
                         name="totalSlots"
-                        label="Total Slots"
+                        label={t('ganpati.total_slots')}
                         required
                         min={1}
                         size="small"
@@ -441,7 +435,7 @@ export default function GanpatiManagement() {
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="material"
-                        label="Material"
+                        label={t('ganpati.material')}
                         options={materialOptions}
                         required
                         size="small"
@@ -450,7 +444,7 @@ export default function GanpatiManagement() {
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="colorTheme"
-                        label="Color Theme"
+                        label={t('ganpati.color_theme')}
                         options={colorOptions}
                         required
                         size="small"
@@ -459,7 +453,7 @@ export default function GanpatiManagement() {
                     <Grid size={12}>
                       <PhotoUpload
                         name="images"
-                        label="Images"
+                        label={t('ganpati.images')}
                         maxFiles={5}
                         compress={false}
                         required={!editingGanpati}
@@ -482,7 +476,7 @@ export default function GanpatiManagement() {
                             }}
                           />
                         }
-                        label={watch('isActive') ? 'Active' : 'Inactive'}
+                        label={watch('isActive') ? t('ganpati.active') : t('ganpati.inactive')}
                         sx={{ '& .MuiTypography-root': { fontWeight: 500 } }}
                       />
                     </Grid>
@@ -493,8 +487,25 @@ export default function GanpatiManagement() {
             </FormProvider>
           </DialogContent>
 
-          <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6', gap: 1, flexWrap: 'wrap' }}>
-            <Button onClick={() => setDialogOpen(false)} disabled={submitting} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>
+          <DialogActions sx={{
+            p: { xs: 1.5, sm: 3 },
+            pt: { xs: 1, sm: 0 },
+            borderTop: '1px solid #f0ebe6',
+            gap: 1,
+            flexWrap: 'wrap',
+            flexDirection: { xs: 'column-reverse', sm: 'row' }
+          }}>
+            <Button
+              onClick={() => setDialogOpen(false)}
+              disabled={submitting}
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                px: 3,
+                width: { xs: '100%', sm: 'auto' },
+                order: { xs: 2, sm: 1 }
+              }}
+            >
               {t('button.cancel')}
             </Button>
             <Button
@@ -502,10 +513,12 @@ export default function GanpatiManagement() {
               form="ganpati-form"
               variant="contained"
               disabled={submitting}
-              sx={{ 
+              sx={{
                 background: 'linear-gradient(135deg, #E65100, #FF8F00)',
                 borderRadius: 3,
                 px: 4,
+                width: { xs: '100%', sm: 'auto' },
+                order: { xs: 1, sm: 2 },
                 '&:hover': {
                   transform: 'translateY(-2px)',
                   boxShadow: `0 8px 25px ${alpha('#E65100', 0.4)}`,
@@ -513,17 +526,26 @@ export default function GanpatiManagement() {
                 transition: 'all 0.3s ease',
               }}
             >
-              {submitting ? t('table.loading') : (editingGanpati ? 'Update' : 'Add')}
+              {submitting ? t('table.loading') : (editingGanpati ? t('button.update') : t('button.add'))}
             </Button>
           </DialogActions>
         </Dialog>
 
+        {/* View Dialog */}
         <Dialog
           open={viewDialogOpen}
           onClose={() => setViewDialogOpen(false)}
           maxWidth="md"
           fullWidth
-          PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}
+          fullScreen={isMobile}
+          PaperProps={{
+            sx: {
+              borderRadius: { xs: 0, sm: 4 },
+              overflow: 'hidden',
+              margin: { xs: 0, sm: 'auto' },
+              maxHeight: { xs: '100vh', sm: '90vh' },
+            }
+          }}
         >
           <DialogTitle
             sx={{
@@ -532,27 +554,29 @@ export default function GanpatiManagement() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              py: 2.5,
-              px: 3,
+              py: { xs: 1.5, sm: 2.5 },
+              px: { xs: 1.5, sm: 3 },
               flexWrap: 'wrap',
               gap: 1
             }}
           >
             <Box display="flex" alignItems="center" gap={1.5}>
-              <CategoryIcon sx={{ fontSize: 28 }} />
-              <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                Ganpati Details
+              <CategoryIcon sx={{ fontSize: { xs: 20, sm: 28 } }} />
+              <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '0.95rem', sm: '1.25rem' } }}>
+                {t('ganpati.details')}
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
               {viewGanpati && (
                 <Chip
-                  label={viewGanpati.isActive ? 'Active' : 'Inactive'}
+                  label={viewGanpati.isActive ? t('ganpati.active') : t('ganpati.inactive')}
                   size="small"
-                  sx={{ 
+                  sx={{
                     bgcolor: viewGanpati.isActive ? '#e8f5e9' : '#ffebee',
                     color: viewGanpati.isActive ? '#2e7d32' : '#d32f2f',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    height: { xs: 20, sm: 24 },
+                    fontSize: { xs: '0.6rem', sm: '0.7rem' }
                   }}
                 />
               )}
@@ -562,20 +586,20 @@ export default function GanpatiManagement() {
             </Box>
           </DialogTitle>
 
-          <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6' }}>
+          <DialogContent sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: '#faf8f6' }}>
             {viewGanpati && (
               <Box>
                 {viewGanpati.images && viewGanpati.images.length > 0 && (
-                  <Paper sx={{ 
-                    p: 2.5, 
-                    borderRadius: 3, 
+                  <Paper sx={{
+                    p: { xs: 1.5, sm: 2.5 },
+                    borderRadius: 3,
                     bgcolor: 'white',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                     border: '1px solid #f0ebe6',
                     mb: 3
                   }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ImageIcon fontSize="small" /> Images
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                      <ImageIcon fontSize="small" /> {t('ganpati.images')}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1 }}>
                       {viewGanpati.images.map((img, idx) => (
@@ -584,8 +608,8 @@ export default function GanpatiManagement() {
                           component="img"
                           src={img}
                           sx={{
-                            width: 100,
-                            height: 100,
+                            width: { xs: 70, sm: 100 },
+                            height: { xs: 70, sm: 100 },
                             borderRadius: 2,
                             objectFit: 'contain',
                             backgroundColor: '#f5f0eb',
@@ -604,48 +628,48 @@ export default function GanpatiManagement() {
                   </Paper>
                 )}
 
-                <Grid container spacing={2}>
+                <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <Paper sx={{ 
-                      p: 2.5, 
-                      borderRadius: 3, 
+                    <Paper sx={{
+                      p: { xs: 1.5, sm: 2.5 },
+                      borderRadius: 3,
                       bgcolor: 'white',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                       border: '1px solid #f0ebe6',
                       height: '100%'
                     }}>
-                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CategoryIcon fontSize="small" /> Basic Information
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                        <CategoryIcon fontSize="small" /> {t('ganpati.basic_info')}
                       </Typography>
-                      <ViewDetailRow label="Name" value={viewGanpati.name} icon={<CategoryIcon sx={{ fontSize: 18 }} />} />
-                      <ViewDetailRow label="Height" value={viewGanpati.height} icon={<HeightIcon sx={{ fontSize: 18 }} />} />
-                      <ViewDetailRow label="Material" value={viewGanpati.material} />
-                      <ViewDetailRow label="Color Theme" value={viewGanpati.colorTheme} icon={<PaletteIcon sx={{ fontSize: 18 }} />} />
-                      <ViewDetailRow label="Price" value={`₹${viewGanpati.price?.toLocaleString() || 0}`} icon={<MoneyIcon sx={{ fontSize: 18 }} />} />
+                      <ViewDetailRow label={t('ganpati.name')} value={viewGanpati.name} icon={<CategoryIcon sx={{ fontSize: 18 }} />} />
+                      <ViewDetailRow label={t('ganpati.height')} value={viewGanpati.height} icon={<HeightIcon sx={{ fontSize: 18 }} />} />
+                      <ViewDetailRow label={t('ganpati.material')} value={viewGanpati.material} />
+                      <ViewDetailRow label={t('ganpati.color_theme')} value={viewGanpati.colorTheme} icon={<PaletteIcon sx={{ fontSize: 18 }} />} />
+                      <ViewDetailRow label={t('ganpati.price')} value={`₹${viewGanpati.price?.toLocaleString() || 0}`} icon={<MoneyIcon sx={{ fontSize: 18 }} />} />
                     </Paper>
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <Paper sx={{ 
-                      p: 2.5, 
-                      borderRadius: 3, 
+                    <Paper sx={{
+                      p: { xs: 1.5, sm: 2.5 },
+                      borderRadius: 3,
                       bgcolor: 'white',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                       border: '1px solid #f0ebe6',
                       height: '100%'
                     }}>
-                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <InventoryIcon fontSize="small" /> Availability
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                        <InventoryIcon fontSize="small" /> {t('ganpati.availability')}
                       </Typography>
-                      <ViewDetailRow label="Total Slots" value={viewGanpati.totalSlots} icon={<InventoryIcon sx={{ fontSize: 18 }} />} />
-                      <ViewDetailRow label="Available Slots" value={viewGanpati.availableSlots} />
-                      <ViewDetailRow label="Rating" value={viewGanpati.rating || 0} />
-                      <ViewDetailRow label="Likes" value={viewGanpati.likes || 0} />
-                      <ViewDetailRow label="Created At" value={viewGanpati.createdAt ? new Date(viewGanpati.createdAt).toLocaleDateString() : 'N/A'} />
+                      <ViewDetailRow label={t('ganpati.total_slots')} value={viewGanpati.totalSlots} icon={<InventoryIcon sx={{ fontSize: 18 }} />} />
+                      <ViewDetailRow label={t('ganpati.available_slots')} value={viewGanpati.availableSlots} />
+                      <ViewDetailRow label={t('ganpati.rating')} value={viewGanpati.rating || 0} />
+                      <ViewDetailRow label={t('ganpati.likes')} value={viewGanpati.likes || 0} />
+                      <ViewDetailRow label={t('ganpati.created_at')} value={viewGanpati.createdAt ? new Date(viewGanpati.createdAt).toLocaleDateString() : 'N/A'} />
                     </Paper>
                   </Grid>
                 </Grid>
 
-                <Box display="flex" gap={2} flexWrap="wrap" sx={{ mt: 3 }}>
+                <Box display="flex" gap={2} flexWrap="wrap" sx={{ mt: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
                   <Button
                     variant="contained"
                     startIcon={<EditIcon />}
@@ -654,14 +678,15 @@ export default function GanpatiManagement() {
                       const ganpati = ganpatiList.find((g) => g.id === viewGanpati.id);
                       if (ganpati) handleEdit(ganpati);
                     }}
-                    sx={{ 
+                    sx={{
                       bgcolor: '#1976d2',
                       '&:hover': { bgcolor: '#1565c0' },
                       borderRadius: 3,
-                      px: 3
+                      px: 3,
+                      width: { xs: '100%', sm: 'auto' }
                     }}
                   >
-                    Edit Ganpati
+                    {t('ganpati.edit')}
                   </Button>
                   <Button
                     variant="contained"
@@ -672,27 +697,52 @@ export default function GanpatiManagement() {
                       const ganpati = ganpatiList.find((g) => g.id === viewGanpati.id);
                       if (ganpati) handleDelete(ganpati);
                     }}
-                    sx={{ borderRadius: 3, px: 3 }}
+                    sx={{
+                      borderRadius: 3,
+                      px: 3,
+                      width: { xs: '100%', sm: 'auto' }
+                    }}
                   >
-                    Delete Ganpati
+                    {t('button.delete')}
                   </Button>
                 </Box>
               </Box>
             )}
           </DialogContent>
 
-          <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6' }}>
-            <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>
-              Close
+          <DialogActions sx={{
+            p: { xs: 1.5, sm: 3 },
+            pt: 0,
+            borderTop: '1px solid #f0ebe6'
+          }}>
+            <Button
+              onClick={() => setViewDialogOpen(false)}
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                px: 3,
+                width: { xs: '100%', sm: 'auto' }
+              }}
+            >
+              {t('button.close')}
             </Button>
           </DialogActions>
         </Dialog>
 
+        {/* Image Preview Dialog */}
         <Dialog
           open={imagePreviewOpen}
           onClose={() => setImagePreviewOpen(false)}
           maxWidth="md"
-          PaperProps={{ sx: { borderRadius: 4, bgcolor: 'rgba(0,0,0,0.92)', maxWidth: '90vw', maxHeight: '90vh' } }}
+          PaperProps={{
+            sx: {
+              borderRadius: 4,
+              bgcolor: 'rgba(0,0,0,0.92)',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              margin: { xs: 1, sm: 'auto' }
+            }
+          }}
         >
           <DialogContent sx={{ p: 0, position: 'relative' }}>
             <IconButton
@@ -705,14 +755,15 @@ export default function GanpatiManagement() {
                 bgcolor: 'rgba(0,0,0,0.5)',
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
                 zIndex: 1,
+                p: { xs: 0.5, sm: 1 }
               }}
             >
-              <CloseIcon />
+              <CloseIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
             </IconButton>
             <Box
               component="img"
               src={selectedImage}
-              alt="Preview"
+              alt={t('ganpati.preview')}
               sx={{
                 width: '100%',
                 maxHeight: '80vh',

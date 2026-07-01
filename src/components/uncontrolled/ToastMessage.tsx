@@ -3,6 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { toast, ToastContainer, type ToastOptions, type ToastContainerProps } from "react-toastify";
 import { Dialog, DialogContent, DialogActions, Button, Typography, Snackbar, Alert, CircularProgress, Box } from "@mui/material";
 import "react-toastify/dist/ReactToastify.css";
+import { useTranslation } from "react-i18next";
 
 export type MessageType = "success" | "error" | "warning" | "info";
 
@@ -21,7 +22,6 @@ export interface ConfirmationOptions {
   onCancel?: () => void;
 }
 
-// ---------------- Toast ----------------
 const toastProps: ToastContainerProps = {
   position: "top-right",
   autoClose: 3000,
@@ -43,7 +43,6 @@ export const showToast = (type: MessageType, message: string, options?: ToastOpt
   toast[type](message, options);
 };
 
-// ---------------- Snackbar ----------------
 let snackbarRoot: Root | null = null;
 const ensureSnackbarRoot = () => {
   if (!snackbarRoot) {
@@ -73,7 +72,6 @@ export const showSnackbar = (severity: MessageType = "info", message: string, du
   snackbarRoot!.render(<Container />);
 };
 
-// ---------------- Confirmation Dialog (Reusable with customization) ----------------
 let confirmRoot: Root | null = null;
 const ensureConfirmRoot = () => {
   if (!confirmRoot) {
@@ -131,6 +129,7 @@ export const showConfirmation = (
 
   return new Promise((resolve) => {
     const Container = () => {
+      const { t } = useTranslation();
       const [open, setOpen] = useState(true);
       const [loading, setLoading] = useState(false);
 
@@ -158,8 +157,7 @@ export const showConfirmation = (
           } catch (error) {
             console.error('Confirmation error:', error);
             setLoading(false);
-            showSnackbar("error", error instanceof Error ? error.message : "Operation failed! Please try again.");
-            // Don't close dialog on error
+            showSnackbar("error", error instanceof Error ? error.message : t('common.operation_failed'));
           }
         } else {
           handleClose(true);
@@ -275,15 +273,15 @@ export const showConfirmation = (
                   border: "1px solid #e2e8f0"
                 }}>
                   <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body2" color="textSecondary">Total Price</Typography>
+                    <Typography variant="body2" color="textSecondary">{t('booking.total')}</Typography>
                     <Typography variant="body1" fontWeight={600}>₹{price.toLocaleString()}</Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body2" color="textSecondary">Advance Payment ({advancePercent}%)</Typography>
+                    <Typography variant="body2" color="textSecondary">{t('booking.advance')} ({advancePercent}%)</Typography>
                     <Typography variant="body1" fontWeight={600} color="#FF5722">₹{advanceAmount.toLocaleString()}</Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="textSecondary">Remaining Amount ({100 - advancePercent}%)</Typography>
+                    <Typography variant="body2" color="textSecondary">{t('booking.remaining')} ({100 - advancePercent}%)</Typography>
                     <Typography variant="body1">₹{remainingAmount.toLocaleString()}</Typography>
                   </Box>
                 </Box>
@@ -333,7 +331,7 @@ export const showConfirmation = (
                 "&.Mui-disabled": confirmColor === "error" ? { bgcolor: "#fecaca", color: "#ef4444" } : {}
               }}
             >
-              {loading ? "Processing..." : confirmText}
+              {loading ? t('common.processing') : confirmText}
             </Button>
           </DialogActions>
         </Dialog>

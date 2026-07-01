@@ -3,7 +3,7 @@ import { Select, MenuItem, type SelectChangeEvent } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 const LanguageSwitcher: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   const handleChange = (event: SelectChangeEvent) => {
     i18n.changeLanguage(event.target.value);
@@ -22,8 +22,9 @@ const LanguageSwitcher: React.FC = () => {
         }
       }}
     >
-      <MenuItem value="en">English</MenuItem>
-      <MenuItem value="kn">ಕನ್ನಡ</MenuItem>
+      <MenuItem value="en">{t('language.en')}</MenuItem>
+      <MenuItem value="mr">{t('language.mr')}</MenuItem>
+      <MenuItem value="hi">{t('language.hi')}</MenuItem>
     </Select>
   );
 };

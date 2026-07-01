@@ -55,7 +55,7 @@ const TextInputField: FC<TextInputFieldProps> = ({
     validate: (value: string) => {
       if (!value || inputType === 'all') return true;
       const config = TextRegexPattern[inputType];
-      return config.regex.test(value) ? true : config.message;
+      return config.regex.test(value) ? true : t(config.messageKey);
     },
     ...rules
   };

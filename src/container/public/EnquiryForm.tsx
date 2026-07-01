@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box, Typography, Grid, Button, Dialog, DialogTitle,
   DialogContent, IconButton, CircularProgress, Tabs, Tab,
-  alpha, Avatar, Chip, Paper
+  alpha, Avatar, Chip, Paper,  useTheme
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -23,7 +23,6 @@ import { GanpatiResponseDto, RegistrationType, User } from '@/types/MurtiType';
 import TextInputField from '@/components/controlled/TextInputField';
 import MobileField from '@/components/controlled/MobileField';
 import DropdownField from '@/components/controlled/DropdownField';
-import { useTheme } from '@mui/material';
 
 const indianStates = [
   'Maharashtra', 'Gujarat', 'Karnataka', 'Tamil Nadu', 'Kerala',
@@ -32,32 +31,53 @@ const indianStates = [
 ];
 
 const maharashtraDistricts = [
-  'Pune', 'Mumbai City', 'Mumbai Suburban', 'Thane', 'Nashik',
-  'Nagpur', 'Aurangabad', 'Solapur', 'Kolhapur', 'Sangli',
-  'Satara', 'Ratnagiri', 'Raigad', 'Palghar', 'Jalgaon',
-  'Dhule', 'Nandurbar', 'Ahmednagar', 'Beed', 'Latur',
-  'Osmanabad', 'Nanded', 'Parbhani', 'Hingoli', 'Washim',
-  'Akola', 'Amravati', 'Buldhana', 'Yavatmal', 'Wardha',
-  'Chandrapur', 'Gadchiroli', 'Bhandara', 'Gondia'
+  'Ahmednagar', 'Akola', 'Amravati', 'Aurangabad', 'Beed',
+  'Bhandara', 'Buldhana', 'Chandrapur', 'Dhule', 'Gadchiroli',
+  'Gondia', 'Hingoli', 'Jalgaon', 'Jalna', 'Kolhapur',
+  'Latur', 'Mumbai City', 'Mumbai Suburban', 'Nagpur', 'Nanded',
+  'Nandurbar', 'Nashik', 'Osmanabad', 'Palghar', 'Parbhani',
+  'Pune', 'Raigad', 'Ratnagiri', 'Sangli', 'Satara',
+  'Sindhudurg', 'Solapur', 'Thane', 'Wardha', 'Washim',
+  'Yavatmal'
 ];
 
 const talukas: Record<string, string[]> = {
-  'Pune': ['Haveli', 'Mulshi', 'Maval', 'Khed', 'Shirur', 'Daund', 'Baramati', 'Purandar', 'Velhe', 'Bhor'],
-  'Mumbai City': ['Colaba', 'Fort', 'Byculla', 'Worli', 'Mahim', 'Matunga'],
-  'Mumbai Suburban': ['Andheri', 'Bandra', 'Kurla', 'Ghatkopar', 'Mulund', 'Borivali', 'Dadar'],
-  'Thane': ['Thane', 'Kalyan', 'Bhiwandi', 'Ulhasnagar', 'Ambernath', 'Palava'],
-  'Nashik': ['Nashik', 'Malegaon', 'Sinnar', 'Igatpuri', 'Niphad', 'Yeola'],
-  'Nagpur': ['Nagpur', 'Wardha', 'Katol', 'Ramtek', 'Umred', 'Kamptee'],
-  'Aurangabad': ['Aurangabad', 'Paithan', 'Vaijapur', 'Gangapur', 'Sillod'],
-  'Solapur': ['Solapur', 'Pandharpur', 'Akkalkot', 'Barsi', 'Malshiras'],
-  'Kolhapur': ['Kolhapur', 'Ichalkaranji', 'Shirol', 'Hatkanangle', 'Karvir'],
-  'Sangli': ['Sangli', 'Miraj', 'Tasgaon', 'Kavathe Mahankal', 'Jat'],
-  'Satara': ['Satara', 'Karad', 'Wai', 'Koregaon', 'Phaltan'],
-  'Ratnagiri': ['Ratnagiri', 'Chiplun', 'Guhagar', 'Dapoli', 'Lanja'],
-  'Raigad': ['Alibag', 'Panvel', 'Khopoli', 'Patalganga', 'Roha'],
-  'Palghar': ['Palghar', 'Vasai', 'Virar', 'Boisar', 'Dahanu'],
-  'Jalgaon': ['Jalgaon', 'Bhusawal', 'Chalisgaon', 'Pachora', 'Jamner'],
-  'Ahmednagar': ['Ahmednagar', 'Shrirampur', 'Rahuri', 'Kopargaon', 'Sangamner']
+  'Ahmednagar': ['Ahmednagar', 'Shrirampur', 'Rahuri', 'Kopargaon', 'Sangamner', 'Nevasa', 'Shevgaon', 'Pathardi', 'Jamkhed', 'Parner', 'Akole', 'Shrigonda', 'Karjat'],
+  'Akola': ['Akola', 'Telhara', 'Balapur', 'Barshitakli', 'Murtijapur', 'Patur', 'Akot'],
+  'Amravati': ['Amravati', 'Daryapur', 'Chandurbazar', 'Anjangaon', 'Achalpur', 'Warud', 'Morshi', 'Nandgaon Khandeshwar', 'Bhatkuli', 'Dharni', 'Chikhaldara'],
+  'Aurangabad': ['Aurangabad', 'Paithan', 'Vaijapur', 'Gangapur', 'Sillod', 'Phulambri', 'Khuldabad', 'Soegaon', 'Kannad'],
+  'Beed': ['Beed', 'Parli', 'Georai', 'Ambejogai', 'Ashti', 'Patoda', 'Shirur Kasar', 'Wadwani', 'Kaij', 'Majalgaon', 'Dharur'],
+  'Bhandara': ['Bhandara', 'Tumsar', 'Pauni', 'Mohadi', 'Sakoli', 'Lakhani', 'Lakhmandur'],
+  'Buldhana': ['Buldhana', 'Khamgaon', 'Shegaon', 'Malkapur', 'Nandura', 'Jalgaon Jamod', 'Sangrampur', 'Deulgaon Raja', 'Chikhli', 'Lonar', 'Mehkar', 'Sindkhed Raja'],
+  'Chandrapur': ['Chandrapur', 'Warora', 'Mul', 'Brahmapuri', 'Chimur', 'Gondpipri', 'Nagbhid', 'Sawali', 'Pombhurna', 'Bhadravati', 'Rajura', 'Korpana', 'Jiwati', 'Ballarpur'],
+  'Dhule': ['Dhule', 'Shirpur', 'Sakri', 'Sindkheda'],
+  'Gadchiroli': ['Gadchiroli', 'Aheri', 'Armori', 'Bhamragad', 'Chamorshi', 'Dhanora', 'Etapalli', 'Gadchiroli', 'Korchi', 'Kurkheda', 'Mulchera', 'Sironcha'],
+  'Gondia': ['Gondia', 'Tirora', 'Arjuni Morgaon', 'Deori', 'Amgaon', 'Salekasa', 'Goregaon', 'Sadak Arjuni'],
+  'Hingoli': ['Hingoli', 'Kalamnuri', 'Sengaon', 'Aundha Nagnath', 'Basmath'],
+  'Jalgaon': ['Jalgaon', 'Bhusawal', 'Chalisgaon', 'Pachora', 'Jamner', 'Amalner', 'Parola', 'Erandol', 'Dharangaon', 'Raver', 'Yawal', 'Bhadgaon', 'Muktai Nagar', 'Bodwad'],
+  'Jalna': ['Jalna', 'Bhokardan', 'Jafferabad', 'Badnapur', 'Ghansawangi', 'Partur', 'Mantha', 'Ambad'],
+  'Kolhapur': ['Kolhapur', 'Ichalkaranji', 'Shirol', 'Hatkanangle', 'Karvir', 'Panhala', 'Gaganbavda', 'Kagal', 'Radhanagari', 'Ajra', 'Chandgad', 'Bavda', 'Shahuwadi'],
+  'Latur': ['Latur', 'Udgir', 'Ahmadpur', 'Chakur', 'Deoni', 'Jalkot', 'Nilanga', 'Ausa', 'Shirur Anantpal', 'Renapur'],
+  'Mumbai City': ['Colaba', 'Fort', 'Byculla', 'Worli', 'Mahim', 'Matunga', 'Dadar', 'Parel', 'Girgaon', 'Chinchpokli', 'Malabar Hill', 'Cuffe Parade'],
+  'Mumbai Suburban': ['Andheri', 'Bandra', 'Kurla', 'Ghatkopar', 'Mulund', 'Borivali', 'Dadar', 'Kandivali', 'Malad', 'Goregaon', 'Jogeshwari', 'Vile Parle', 'Santacruz', 'Khar', 'Bandra East', 'Kanjurmarg', 'Bhandup', 'Nahur', 'Powai', 'Marol', 'Sakinaka', 'Chakala'],
+  'Nagpur': ['Nagpur', 'Wardha', 'Katol', 'Ramtek', 'Umred', 'Kamptee', 'Hingna', 'Kalmeshwar', 'Narkhed', 'Saoner', 'Mouda', 'Bhiwapur', 'Kuhi', 'Parseoni'],
+  'Nanded': ['Nanded', 'Deglur', 'Mudkhed', 'Bhokar', 'Hadgaon', 'Himayatnagar', 'Kinwat', 'Loha', 'Mahur', 'Mukhed', 'Naigaon', 'Kandhar', 'Biloli', 'Dharmabad', 'Ardhapur'],
+  'Nandurbar': ['Nandurbar', 'Shahade', 'Nawapur', 'Akkalkuwa', 'Taloda', 'Dhadgaon'],
+  'Nashik': ['Nashik', 'Malegaon', 'Sinnar', 'Igatpuri', 'Niphad', 'Yeola', 'Chandwad', 'Deola', 'Kalwan', 'Peth', 'Satana', 'Surgana', 'Trimbakeshwar', 'Dindori', 'Nandgaon', 'Baglan'],
+  'Osmanabad': ['Osmanabad', 'Tuljapur', 'Paranda', 'Bhoom', 'Washi', 'Kallam', 'Lohara'],
+  'Palghar': ['Palghar', 'Vasai', 'Virar', 'Boisar', 'Dahanu', 'Talasari', 'Jawhar', 'Mokhada', 'Vikramgad', 'Wada'],
+  'Parbhani': ['Parbhani', 'Gangakhed', 'Manwat', 'Pathri', 'Purna', 'Jintur', 'Selu', 'Sonpeth', 'Sailu'],
+  'Pune': ['Haveli', 'Mulshi', 'Maval', 'Khed', 'Shirur', 'Daund', 'Baramati', 'Purandar', 'Velhe', 'Bhor', 'Indapur', 'Junnar', 'Ambegaon', 'Khadakwasla'],
+  'Raigad': ['Alibag', 'Panvel', 'Khopoli', 'Patalganga', 'Roha', 'Mangaon', 'Mhasala', 'Shrivardhan', 'Murud', 'Tala', 'Sudhagad', 'Karjat', 'Khalapur', 'Poladpur', 'Mahad', 'Uran', 'Pen'],
+  'Ratnagiri': ['Ratnagiri', 'Chiplun', 'Guhagar', 'Dapoli', 'Lanja', 'Mandangad', 'Rajapur', 'Sangameshwar', 'Khed', 'Ratnagiri'],
+  'Sangli': ['Sangli', 'Miraj', 'Tasgaon', 'Kavathe Mahankal', 'Jat', 'Walwa', 'Palus', 'Khanapur', 'Atpadi', 'Kadegaon', 'Shirala'],
+  'Satara': ['Satara', 'Karad', 'Wai', 'Koregaon', 'Phaltan', 'Patan', 'Jawali', 'Mahabaleshwar', 'Khandala', 'Man', 'Khatav', 'Jaoli'],
+  'Sindhudurg': ['Sawantwadi', 'Vengurla', 'Kudal', 'Malvan', 'Kankavli', 'Devgad', 'Dodamarg', 'Vaibhavwadi', 'Sindhudurg'],
+  'Solapur': ['Solapur', 'Pandharpur', 'Akkalkot', 'Barsi', 'Malshiras', 'Mohol', 'Madha', 'Sangola', 'Karmala', 'Mangalwedha', 'Northeast Solapur', 'South Solapur'],
+  'Thane': ['Thane', 'Kalyan', 'Bhiwandi', 'Ulhasnagar', 'Ambernath', 'Palava', 'Badlapur', 'Dombivli', 'Mira Road', 'Bhayandar', 'Navi Mumbai', 'Airoli', 'Rabale', 'Ghansoli', 'Turbhe', 'Vashi', 'Kharghar', 'Kamothe', 'Panvel'],
+  'Wardha': ['Wardha', 'Hinganghat', 'Samudrapur', 'Arvi', 'Deoli', 'Karanja', 'Ashti', 'Seloo', 'Talegaon'],
+  'Washim': ['Washim', 'Karanja', 'Risod', 'Malegaon', 'Mangrulpir', 'Manora'],
+  'Yavatmal': ['Yavatmal', 'Umarkhed', 'Pusad', 'Digras', 'Ner', 'Darwha', 'Arni', 'Ralegaon', 'Ghatanji', 'Zari Jamni', 'Maregaon', 'Kalamb', 'Mahagaon', 'Babhulgaon']
 };
 
 const stateOptions = indianStates.map((state) => ({ value: state, label: state }));
@@ -109,6 +129,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
+  
   const [tabValue, setTabValue] = useState<number>(0);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [selectedGanpati, setSelectedGanpati] = useState<GanpatiResponseDto | null>(ganpati);
@@ -231,7 +252,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
         });
 
         if (response.success) {
-          showSnackbar('success', 'Enquiry submitted successfully! 🙏');
+          showSnackbar('success', t('enquiry.success'));
           
           const message = generateEnquiryMessage(
             selectedGanpati.name,
@@ -239,7 +260,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
             selectedGanpati.price,
             data.name,
             data.phone,
-            `Type: ${data.registrationType === 'HOME' ? 'Home Ganpati' : 'Mandal Ganpati'}`
+            `${t('enquiry.type')}: ${data.registrationType === 'HOME' ? t('enquiry.home_ganpati') : t('enquiry.mandal_ganpati')}`
           );
           
           sendWhatsAppMessage(config.ADMIN_WHATSAPP, message);
@@ -263,7 +284,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
         }
 
         if (response.success) {
-          showSnackbar('success', editingCustomer ? 'Customer updated successfully' : 'Customer registered successfully');
+          showSnackbar('success', editingCustomer ? t('customer.update_success') : t('customer.register_success'));
           handleClose();
           if (onSuccess) onSuccess();
         } else {
@@ -280,7 +301,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
 
   const getTitle = (): string => {
     if (isCustomerMode) {
-      return editingCustomer ? 'Edit Customer' : 'New Customer';
+      return editingCustomer ? t('customer.edit') : t('customer.add');
     }
     if (isEnquiryMode && selectedGanpati) {
       return t('enquiry.title');
@@ -293,7 +314,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     label: `${g.name} (${g.height}) - ₹${g.price.toLocaleString()}`
   }));
 
-  const isMobile = window.innerWidth < 600;
+  const isMobileScreen = window.innerWidth < 600;
 
   return (
     <Dialog
@@ -301,7 +322,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
       onClose={handleClose}
       maxWidth="md"
       fullWidth
-      fullScreen={isMobile}
+      fullScreen={isMobileScreen}
       PaperProps={{
         sx: {
           borderRadius: { xs: 0, sm: 4 },
@@ -319,8 +340,8 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          py: { xs: 2, sm: 2.5 },
-          px: { xs: 2, sm: 3 },
+          py: { xs: 1.5, sm: 2.5 },
+          px: { xs: 1.5, sm: 3 },
           flexShrink: 0,
           flexWrap: 'wrap',
           gap: 1,
@@ -350,7 +371,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
       >
         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" sx={{ position: 'relative', zIndex: 1 }}>
           <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+            <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '0.95rem', sm: '1.25rem' } }}>
               {getTitle()}
             </Typography>
             {isEnquiryMode && selectedGanpati && (
@@ -361,19 +382,20 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           </Box>
           {selectedGanpati && (
             <Chip
-              avatar={<Avatar src={selectedGanpati.images?.[0]} sx={{ width: 28, height: 28 }} />}
+              avatar={<Avatar src={selectedGanpati.images?.[0]} sx={{ width: { xs: 20, sm: 28 }, height: { xs: 20, sm: 28 } }} />}
               label={`${selectedGanpati.name} - ${selectedGanpati.height}`}
               size="small"
               sx={{ 
                 bgcolor: alpha('#fff', 0.2), 
                 color: 'white',
-                '& .MuiChip-label': { fontWeight: 600, fontSize: '0.7rem' }
+                '& .MuiChip-label': { fontWeight: 600, fontSize: { xs: '0.6rem', sm: '0.7rem' } },
+                height: { xs: 24, sm: 32 }
               }}
             />
           )}
         </Box>
-        <IconButton onClick={handleClose} sx={{ color: 'white', position: 'relative', zIndex: 1 }}>
-          <CloseIcon />
+        <IconButton onClick={handleClose} sx={{ color: 'white', position: 'relative', zIndex: 1, p: { xs: 0.5, sm: 1 } }}>
+          <CloseIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
         </IconButton>
       </DialogTitle>
 
@@ -382,7 +404,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           borderBottom: 1, 
           borderColor: alpha(theme.palette.primary.main, 0.1),
           bgcolor: alpha(theme.palette.primary.main, 0.02),
-          px: 2
+          px: { xs: 1, sm: 2 }
         }}>
           <Tabs 
             value={tabValue} 
@@ -396,14 +418,15 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
             }}
           >
             <Tab 
-              icon={<HomeIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+              icon={<HomeIcon sx={{ fontSize: { xs: 16, sm: 20 } }} />} 
               label={t('enquiry.home_ganpati')} 
               iconPosition="start"
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: '0.875rem',
-                minHeight: 48,
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                minHeight: { xs: 40, sm: 48 },
+                px: { xs: 1, sm: 2 },
                 borderRadius: '12px 12px 0 0',
                 '&.Mui-selected': {
                   color: '#E65100',
@@ -412,14 +435,15 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
               }}
             />
             <Tab 
-              icon={<TempleIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+              icon={<TempleIcon sx={{ fontSize: { xs: 16, sm: 20 } }} />} 
               label={t('enquiry.mandal_ganpati')} 
               iconPosition="start"
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: '0.875rem',
-                minHeight: 48,
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                minHeight: { xs: 40, sm: 48 },
+                px: { xs: 1, sm: 2 },
                 borderRadius: '12px 12px 0 0',
                 '&.Mui-selected': {
                   color: '#E65100',
@@ -430,23 +454,23 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           </Tabs>
         </Box>
 
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
               {isCustomerMode && (
                 <Paper sx={{ 
-                  p: 2, 
-                  mb: 3, 
+                  p: { xs: 1.5, sm: 2 }, 
+                  mb: 2.5, 
                   borderRadius: 2,
                   bgcolor: alpha('#E65100', 0.03),
                   border: `1px solid ${alpha('#E65100', 0.1)}`
                 }}>
-                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: '#E65100', display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SchoolIcon fontSize="small" /> Select Ganpati
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: '#E65100', display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                    <SchoolIcon fontSize="small" /> {t('enquiry.select_ganpati')}
                   </Typography>
                   <DropdownField
                     name="ganpatiId"
-                    label="Select Ganpati"
+                    label={t('enquiry.select_ganpati')}
                     options={ganpatiOptions}
                     required
                     size="small"
@@ -457,14 +481,14 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
               )}
 
               {tabValue === 0 && (
-                <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, bgcolor: alpha('#FFF5F0', 0.5) }}>
-                  <Grid container spacing={2}>
+                <Paper sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: 2, bgcolor: alpha('#FFF5F0', 0.5) }}>
+                  <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <TextInputField
                         name="name"
-                        label={isCustomerMode ? 'Customer Name' : t('enquiry.name')}
+                        label={isCustomerMode ? t('customer.name') : t('enquiry.name')}
                         required
-                        placeholder={isCustomerMode ? 'Enter customer name' : t('enquiry.name')}
+                        placeholder={isCustomerMode ? t('enquiry.enter_customer_name') : t('enquiry.enter_name')}
                         inputType="alphabet"
                         size="small"
                       />
@@ -472,24 +496,24 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <MobileField
                         name="phone"
-                        label={isCustomerMode ? 'Customer WhatsApp' : `${t('enquiry.phone')} (WhatsApp)`}
+                        label={isCustomerMode ? t('customer.phone') : t('enquiry.phone')}
                         required
-                        placeholder="10 digit mobile number"
+                        placeholder={t('enquiry.enter_phone')}
                         size="small"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <MobileField
                         name="alternatePhone"
-                        label={isCustomerMode ? 'Alternate WhatsApp' : `${t('enquiry.alternate_phone')} (WhatsApp)`}
-                        placeholder="10 digit mobile number"
+                        label={isCustomerMode ? t('enquiry.alternate_phone') : t('enquiry.alternate_phone_optional')}
+                        placeholder={t('enquiry.enter_phone')}
                         size="small"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="state"
-                        label={isCustomerMode ? 'State' : t('enquiry.state')}
+                        label={isCustomerMode ? t('enquiry.state') : t('enquiry.state')}
                         options={stateOptions}
                         required
                         size="small"
@@ -498,7 +522,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="district"
-                        label={isCustomerMode ? 'District' : t('enquiry.district')}
+                        label={isCustomerMode ? t('enquiry.district') : t('enquiry.district')}
                         options={districtOptions}
                         required
                         size="small"
@@ -507,7 +531,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="taluka"
-                        label={isCustomerMode ? 'Taluka' : t('enquiry.taluka')}
+                        label={isCustomerMode ? t('enquiry.taluka') : t('enquiry.taluka')}
                         options={talukaOptions}
                         required
                         disabled={!selectedDistrict}
@@ -517,9 +541,9 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <TextInputField
                         name="city"
-                        label="City"
+                        label={t('enquiry.city')}
                         required
-                        placeholder="Enter city name"
+                        placeholder={t('enquiry.enter_city')}
                         inputType="alphabet"
                         size="small"
                       />
@@ -527,11 +551,11 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 8 }}>
                       <TextInputField
                         name="address"
-                        label={isCustomerMode ? 'Address' : t('enquiry.address')}
+                        label={isCustomerMode ? t('customer.address') : t('enquiry.address')}
                         required
                         inputType="all"
                         rows={2}
-                        placeholder={isCustomerMode ? 'Enter full address' : t('enquiry.address')}
+                        placeholder={isCustomerMode ? t('enquiry.enter_full_address') : t('enquiry.enter_address')}
                         size="small"
                       />
                     </Grid>
@@ -540,14 +564,14 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
               )}
 
               {tabValue === 1 && (
-                <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, bgcolor: alpha('#FFF5F0', 0.5) }}>
-                  <Grid container spacing={2}>
+                <Paper sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: 2, bgcolor: alpha('#FFF5F0', 0.5) }}>
+                  <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <TextInputField
                         name="mandalName"
-                        label={isCustomerMode ? 'Mandal Name' : t('enquiry.mandal_name')}
+                        label={isCustomerMode ? t('customer.mandal_name') : t('enquiry.mandal_name')}
                         required
-                        placeholder={isCustomerMode ? 'Enter mandal name' : t('enquiry.mandal_name')}
+                        placeholder={isCustomerMode ? t('enquiry.enter_mandal_name') : t('enquiry.enter_mandal_name')}
                         inputType="alphabet"
                         size="small"
                       />
@@ -555,9 +579,9 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <TextInputField
                         name="adhyakshyaName"
-                        label={isCustomerMode ? 'Adhyakshya Name' : t('enquiry.adhyakshya')}
+                        label={isCustomerMode ? t('enquiry.adhyakshya') : t('enquiry.adhyakshya')}
                         required
-                        placeholder={isCustomerMode ? 'Enter adhyakshya name' : t('enquiry.adhyakshya')}
+                        placeholder={isCustomerMode ? t('enquiry.enter_adhyakshya_name') : t('enquiry.enter_adhyakshya_name')}
                         inputType="alphabet"
                         size="small"
                       />
@@ -565,33 +589,33 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <MobileField
                         name="adhyakshyaPhone"
-                        label={isCustomerMode ? 'Adhyakshya WhatsApp' : `${t('enquiry.adhyakshya_phone')} (WhatsApp)`}
+                        label={isCustomerMode ? t('enquiry.adhyakshya_phone') : t('enquiry.adhyakshya_phone')}
                         required
-                        placeholder="10 digit mobile number"
+                        placeholder={t('enquiry.enter_phone')}
                         size="small"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <MobileField
                         name="contactPerson1Phone"
-                        label={isCustomerMode ? 'Contact Person 1 WhatsApp' : `${t('enquiry.contact1_phone')} (WhatsApp)`}
+                        label={isCustomerMode ? t('enquiry.contact1_phone') : t('enquiry.contact1_phone')}
                         required
-                        placeholder="10 digit mobile number"
+                        placeholder={t('enquiry.enter_phone')}
                         size="small"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <MobileField
                         name="contactPerson2Phone"
-                        label={isCustomerMode ? 'Contact Person 2 WhatsApp' : `${t('enquiry.contact2_phone_optional')} (WhatsApp)`}
-                        placeholder="10 digit mobile number"
+                        label={isCustomerMode ? t('enquiry.contact2_phone_optional') : t('enquiry.contact2_phone_optional')}
+                        placeholder={t('enquiry.enter_phone')}
                         size="small"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="state"
-                        label={isCustomerMode ? 'State' : t('enquiry.state')}
+                        label={isCustomerMode ? t('enquiry.state') : t('enquiry.state')}
                         options={stateOptions}
                         required
                         size="small"
@@ -600,7 +624,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="district"
-                        label={isCustomerMode ? 'District' : t('enquiry.district')}
+                        label={isCustomerMode ? t('enquiry.district') : t('enquiry.district')}
                         options={districtOptions}
                         required
                         size="small"
@@ -609,7 +633,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <DropdownField
                         name="taluka"
-                        label={isCustomerMode ? 'Taluka' : t('enquiry.taluka')}
+                        label={isCustomerMode ? t('enquiry.taluka') : t('enquiry.taluka')}
                         options={talukaOptions}
                         required
                         disabled={!selectedDistrict}
@@ -619,9 +643,9 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                       <TextInputField
                         name="city"
-                        label="City"
+                        label={t('enquiry.city')}
                         required
-                        placeholder="Enter city name"
+                        placeholder={t('enquiry.enter_city')}
                         inputType="alphabet"
                         size="small"
                       />
@@ -629,11 +653,11 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     <Grid size={{ xs: 12, sm: 6, md: 8 }}>
                       <TextInputField
                         name="address"
-                        label={isCustomerMode ? 'Address' : t('enquiry.address')}
+                        label={isCustomerMode ? t('customer.address') : t('enquiry.address')}
                         required
                         inputType="all"
                         rows={2}
-                        placeholder={isCustomerMode ? 'Enter full address' : t('enquiry.address')}
+                        placeholder={isCustomerMode ? t('enquiry.enter_full_address') : t('enquiry.enter_address')}
                         size="small"
                       />
                     </Grid>
@@ -642,8 +666,8 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
               )}
 
               <Box sx={{ 
-                mt: 3, 
-                p: 2, 
+                mt: 2.5, 
+                p: { xs: 1.5, sm: 2 }, 
                 bgcolor: alpha(theme.palette.info.main, 0.04), 
                 borderRadius: 2, 
                 border: `1px solid ${alpha(theme.palette.info.main, 0.15)}`,
@@ -651,8 +675,8 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                 alignItems: 'center',
                 gap: 1
               }}>
-                <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
-                  Please provide accurate contact details and address. This will help our team to serve you better and contact you for the booking process.
+                <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.8rem' } }}>
+                  {t('enquiry.submit_note')}
                 </Typography>
               </Box>
 
@@ -663,7 +687,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                 disabled={submitting}
                 startIcon={isEnquiryMode ? <WhatsAppIcon /> : <SaveIcon />}
                 sx={{
-                  mt: 3,
+                  mt: 2.5,
                   background: isEnquiryMode 
                     ? 'linear-gradient(135deg, #25D366, #128C7E)' 
                     : 'linear-gradient(135deg, #E65100, #FF8F00)',
@@ -671,10 +695,10 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                     transform: 'translateY(-2px)',
                     boxShadow: `0 8px 25px ${alpha(isEnquiryMode ? '#25D366' : '#E65100', 0.4)}`,
                   },
-                  py: { xs: 1.5, sm: 1.5 },
+                  py: { xs: 1.2, sm: 1.5 },
                   borderRadius: 50,
-                  minHeight: 48,
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  minHeight: { xs: 40, sm: 48 },
+                  fontSize: { xs: '0.75rem', sm: '1rem' },
                   fontWeight: 700,
                   transition: 'all 0.3s ease',
                   textTransform: 'none',
@@ -685,7 +709,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                 ) : isEnquiryMode ? (
                   t('enquiry.send_whatsapp')
                 ) : (
-                  editingCustomer ? 'Update Customer' : 'Register Customer'
+                  editingCustomer ? t('button.update') : t('button.add')
                 )}
               </Button>
             </form>

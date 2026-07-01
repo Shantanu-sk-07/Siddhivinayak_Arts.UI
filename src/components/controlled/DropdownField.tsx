@@ -74,17 +74,17 @@ const DropdownField: FC<DropdownFieldProps> = ({
             );
 
             if (!exists) {
-              return "Please select item from list";
+              return t('dropdown.select_from_list');
             }
           }
           if (onlyAlphabet && value.length < 3) {
-            return "Minimum 3 characters required";
+            return t('dropdown.min_3_chars');
           }
           if (alphanumeric && value.length < 3) {
-            return "Minimum 3 characters required";
+            return t('dropdown.min_3_chars');
           }
           if (onlyNumber && Number(value) === 0) {
-            return "0 is not allowed";
+            return t('dropdown.zero_not_allowed');
           }
 
           return true;

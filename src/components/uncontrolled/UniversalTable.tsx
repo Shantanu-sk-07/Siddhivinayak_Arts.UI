@@ -32,6 +32,7 @@ import { useMemo, useState, type ReactNode, useEffect, useRef } from "react";
 import { IconTrashX, IconSearch, IconFilterOff, IconPlus } from "@tabler/icons-react";
 import { iconMap } from "@/helpers/Icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export const ACTION_KEY = "actionbutton" as const;
 export const SR_NO_KEY = "sr_no" as const;
@@ -137,15 +138,16 @@ export function UniversalTable<T extends Record<string, unknown>>({
   paperSx,
   highlightColor = "#ffeb3b",
   loading = false,
-  emptyStateMessage = "No data available",
+  emptyStateMessage,
   emptyStateIcon,
   stickyHeader = false,
   maxHeight = "auto",
   showSrNo = true,
-  srNoLabel = "Sr No",
+  srNoLabel,
   rowClickable = false,
   onRowClick,
 }: UniversalTableProps<T>) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
@@ -153,6 +155,10 @@ export function UniversalTable<T extends Record<string, unknown>>({
     new Set(),
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const defaultEmptyMessage = emptyStateMessage || t('table.no_data');
+  const defaultSrNoLabel = srNoLabel || t('table.sr_no');
+  const defaultAddButtonLabel = t('table.add_new');
 
   useEffect(() => {
     setPage(0);
@@ -206,7 +212,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
     },
   };
 
-  // Filter data based on search
   const filteredData = useMemo(() => {
     if (!search) return data;
 
@@ -221,7 +226,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
     );
   }, [data, columns, search]);
 
-  // Paginated data
   const paginatedData = useMemo(
     () =>
       filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
@@ -263,29 +267,26 @@ export function UniversalTable<T extends Record<string, unknown>>({
     );
   };
 
-  // Get global index for Sr. No.
   const getGlobalIndex = (pageIndex: number): number => {
     return page * rowsPerPage + pageIndex + 1;
   };
 
-  // Prepare all columns including Sr. No.
   const allColumns = useMemo(() => {
     const cols = [...columns];
     if (showSrNo) {
       return [
         {
           key: SR_NO_KEY,
-          label: srNoLabel,
-          width: 70,
-          minWidth: 70,
+          label: defaultSrNoLabel,
+          width: 80,
+          minWidth: 80,
         } as Column<T>,
         ...cols,
       ];
     }
     return cols;
-  }, [columns, showSrNo, srNoLabel]);
+  }, [columns, showSrNo, defaultSrNoLabel]);
 
-  // Handle row click
   const handleRowClick = (row: T) => {
     if (rowClickable && onRowClick) {
       onRowClick(row);
@@ -308,7 +309,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
           ...paperSx,
         }}
       >
-        {/* Header with Search and Add Button */}
         {(showSearch || addButton) && (
           <Box
             sx={{
@@ -328,7 +328,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
               <TextField
                 inputRef={searchInputRef}
                 variant="outlined"
-                placeholder="Search..."
+                placeholder={t('table.search')}
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -336,7 +336,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                 }}
                 size="small"
                 sx={{
-                  minWidth: { xs: "100%", sm: 260 },
+                  minWidth: { xs: "100%", sm: 280 },
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 3,
                     transition: "all 0.3s ease",
@@ -378,14 +378,13 @@ export function UniversalTable<T extends Record<string, unknown>>({
                     ...addButton.sx,
                   }}
                 >
-                  {addButton.label || "Add New"}
+                  {addButton.label || defaultAddButtonLabel}
                 </Button>
               </Zoom>
             )}
           </Box>
         )}
 
-        {/* Caption */}
         {caption && (
           <motion.div
             initial={{ scale: 0.95 }}
@@ -410,7 +409,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
           </motion.div>
         )}
 
-        {/* Table Container with Horizontal Scroll on Mobile */}
         <TableContainer
           sx={{
             maxHeight: maxHeight,
@@ -438,7 +436,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
             size={tableSize}
             stickyHeader={stickyHeader}
             sx={{
-              minWidth: { xs: 650, sm: 800, md: 900, lg: "100%" },
+              minWidth: { xs: 700, sm: 850, md: 950, lg: "100%" },
               borderCollapse: "separate",
               borderSpacing: "0",
               tableLayout: "auto",
@@ -457,6 +455,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                       left: 0,
                       zIndex: 3,
                       width: 48,
+                      minWidth: 48,
                     }}
                   >
                     <Checkbox
@@ -488,9 +487,10 @@ export function UniversalTable<T extends Record<string, unknown>>({
                       color: theme.palette.text.primary,
                       borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                       whiteSpace: "nowrap",
-                      width: col.width || (col.key === SR_NO_KEY ? 70 : "auto"),
+                      width: col.width || (col.key === SR_NO_KEY ? 80 : "auto"),
                       minWidth:
-                        col.minWidth || (col.key === SR_NO_KEY ? 70 : 100),
+                        col.minWidth || (col.key === SR_NO_KEY ? 80 : 120),
+                      maxWidth: col.key === SR_NO_KEY ? 80 : "none",
                       position: stickyHeader ? "sticky" : "relative",
                       top: 0,
                       zIndex: 2,
@@ -541,7 +541,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                           color="text.secondary"
                           sx={{ fontWeight: 500 }}
                         >
-                          Loading records...
+                          {t('table.loading_records')}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -582,11 +582,11 @@ export function UniversalTable<T extends Record<string, unknown>>({
                             color="text.secondary"
                             sx={{ fontWeight: 500 }}
                           >
-                            {emptyStateMessage}
+                            {defaultEmptyMessage}
                           </Typography>
                           {search && (
                             <Chip
-                              label={`No results for "${search}"`}
+                              label={t('table.no_results', { search })}
                               onDelete={() => {
                                 setSearch("");
                                 searchInputRef.current?.focus();
@@ -638,7 +638,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                         {enableCheckbox && (
                           <TableCell 
                             padding="checkbox" 
-                            sx={{ width: 48 }}
+                            sx={{ width: 48, minWidth: 48 }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Checkbox
@@ -655,7 +655,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
                         )}
 
                         {allColumns.map((col) => {
-                          // Sr. No. Column
                           if (col.key === SR_NO_KEY) {
                             return (
                               <TableCell
@@ -671,7 +670,9 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                     0.02,
                                   ),
                                   whiteSpace: "nowrap",
-                                  width: 70,
+                                  width: 80,
+                                  minWidth: 80,
+                                  maxWidth: 80,
                                 }}
                               >
                                 {globalSrNo}
@@ -679,7 +680,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
                             );
                           }
 
-                          // Dropdown Column
                           if (
                             dropdown &&
                             col.key === dropdown.key &&
@@ -697,6 +697,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                 sx={{
                                   py: 1.5,
                                   whiteSpace: "nowrap",
+                                  minWidth: 150,
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -706,7 +707,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                   disabled={isDisabled}
                                   sx={{
                                     ...DEFAULT_DROPDOWN_SX,
-                                    width: dropdown.width ?? 150,
+                                    width: dropdown.width ?? 160,
                                     ...dropdown.sx,
                                   }}
                                   onChange={(e) => {
@@ -740,13 +741,12 @@ export function UniversalTable<T extends Record<string, unknown>>({
                             );
                           }
 
-                          // Actions Column
                           if (col.key === ACTION_KEY) {
                             return (
                               <TableCell
                                 key={ACTION_KEY}
                                 align="center"
-                                sx={{ whiteSpace: "nowrap", py: 1 }}
+                                sx={{ whiteSpace: "nowrap", py: 1, minWidth: 100 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Box
@@ -754,7 +754,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                   gap={0.5}
                                   justifyContent="center"
                                 >
-                                  {/* Default Actions */}
                                   {Object.entries(iconMap).map(([k, cfg]) =>
                                     actions?.[k as keyof typeof iconMap] ? (
                                       <Tooltip
@@ -788,14 +787,12 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                       </Tooltip>
                                     ) : null,
                                   )}
-                                  {/* Custom Actions */}
                                   {renderActions && renderActions(row)}
                                 </Box>
                               </TableCell>
                             );
                           }
 
-                          // Default Column
                           return (
                             <TableCell
                               key={String(col.key)}
@@ -804,6 +801,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
                                 py: 1.5,
                                 fontSize: { xs: 12, sm: 14 },
                                 whiteSpace: "nowrap",
+                                minWidth: 120,
                                 transition: "all 0.2s ease",
                               }}
                             >
@@ -844,7 +842,6 @@ export function UniversalTable<T extends Record<string, unknown>>({
           </Table>
         </TableContainer>
 
-        {/* Footer with Pagination */}
         <Box
           sx={{
             display: "flex",
@@ -870,10 +867,8 @@ export function UniversalTable<T extends Record<string, unknown>>({
               <Tooltip
                 title={
                   selectedRows.length === data.length
-                    ? "Delete All Records"
-                    : `Delete ${selectedRows.length} record${
-                        selectedRows.length > 1 ? "s" : ""
-                      }`
+                    ? t('table.delete_all')
+                    : t('table.delete_n_records', { count: selectedRows.length })
                 }
                 arrow
               >

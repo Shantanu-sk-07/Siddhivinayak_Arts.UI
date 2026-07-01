@@ -65,8 +65,6 @@ export default function ContactPage() {
     }
   };
 
- 
-
   const mapEmbedUrl = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3782.6789!2d73.8567!3d18.5204!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTjCsDMxJzEzLjUiTiA3M8KwNTEnMjQuMCJF!5e0!3m2!1sen!2sin!4v1234567890';
 
   return (
@@ -259,10 +257,42 @@ export default function ContactPage() {
                     {t('contact.follow_us')}
                   </Typography>
                   <Box display="flex" gap={1}>
-                    <IconButton sx={{ color: '#25D366' }}><WhatsApp /></IconButton>
-                    <IconButton sx={{ color: '#1877F2' }}><Facebook /></IconButton>
-                    <IconButton sx={{ color: '#E4405F' }}><Instagram /></IconButton>
-                    <IconButton sx={{ color: '#FF0000' }}><YouTube /></IconButton>
+                    <IconButton
+                      component="a"
+                      href={`https://wa.me/${config.ADMIN_WHATSAPP}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#25D366' }}
+                    >
+                      <WhatsApp />
+                    </IconButton>
+                    <IconButton
+                      component="a"
+                      href="https://www.facebook.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#1877F2' }}
+                    >
+                      <Facebook />
+                    </IconButton>
+                    <IconButton
+                      component="a"
+                      href="https://www.instagram.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#E4405F' }}
+                    >
+                      <Instagram />
+                    </IconButton>
+                    <IconButton
+                      component="a"
+                      href="https://www.youtube.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: '#FF0000' }}
+                    >
+                      <YouTube />
+                    </IconButton>
                   </Box>
 
                   <Box sx={{ mt: 3 }}>
@@ -275,6 +305,7 @@ export default function ContactPage() {
                         allowFullScreen
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"
+                        title="Siddhivinayak Arts Location"
                       />
                     </MapContainer>
                   </Box>

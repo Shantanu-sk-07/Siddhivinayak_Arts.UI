@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { PasswordRegex, checkPasswordStrength, PasswordStrengthLevels } from '@/utils/RegexPattern';
+import { PasswordRegex, checkPasswordStrength, getPasswordStrengthLabel } from '@/utils/RegexPattern';
 import { useTranslation } from 'react-i18next';
 import { getComponentTranslations } from '@/helpers/useTranslations';
 
@@ -27,6 +27,7 @@ type PasswordFieldProps = TextFieldProps & {
   showStrengthIndicator?: boolean;
   confirmFieldName?: string;
 };
+
 const PasswordField: FC<PasswordFieldProps> = ({
   name,
   label,
@@ -50,21 +51,22 @@ const PasswordField: FC<PasswordFieldProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState(false);
   const confirmValue = confirmFieldName ? watch(confirmFieldName) : undefined;
+
   const validatePassword = (value: string) => {
     if (!value) return required ? translations.passwordField.requiredError(label) : true;
     if (value.length < minLength) return translations.passwordField.minLength(minLength);
     if (value.length > maxLength) return translations.passwordField.maxLength(maxLength);
-    if (!PasswordRegex.withCase.regex.test(value)) return PasswordRegex.withCase.message;
-    if (!PasswordRegex.withNumber.regex.test(value)) return PasswordRegex.withNumber.message;
-    if (!PasswordRegex.withSpecialChar.regex.test(value)) return PasswordRegex.withSpecialChar.message;
+    if (!PasswordRegex.withCase.regex.test(value)) return t(PasswordRegex.withCase.messageKey);
+    if (!PasswordRegex.withNumber.regex.test(value)) return t(PasswordRegex.withNumber.messageKey);
+    if (!PasswordRegex.withSpecialChar.regex.test(value)) return t(PasswordRegex.withSpecialChar.messageKey);
     if (confirmFieldName && value !== confirmValue) return translations.passwordField.mismatch;
-
     return true;
   };
 
   const getStrengthLevel = (password: string) => {
     const strength = checkPasswordStrength(password);
-    return [...PasswordStrengthLevels].reverse().find((level) => strength >= level.minScore) || PasswordStrengthLevels[0];
+    const level = getPasswordStrengthLabel(password);
+    return { ...level, minScore: strength };
   };
 
   return (
@@ -72,17 +74,17 @@ const PasswordField: FC<PasswordFieldProps> = ({
       name={name}
       control={control}
       rules={{
-        required: required ? `${label} is required` : undefined,
+        required: required ? `${label} ${t('validation.required')}` : undefined,
         validate: validatePassword
       }}
       render={({ field }) => {
         const hasError = !!errors[name];
-        const strengthLevel = getStrengthLevel(field.value);
+        const strengthLevel = getStrengthLevel(field.value || '');
         const showStrength = showStrengthIndicator && field.value && !hasError;
 
         return (
           <Tooltip
-            title="Must contain uppercase, lowercase, number, and special character"
+            title={t('password.requirements')}
             open={focused && !hasError}
             placement="right"
             arrow
@@ -126,7 +128,7 @@ const PasswordField: FC<PasswordFieldProps> = ({
                 <Box sx={{ mt: 1 }}>
                   <LinearProgress
                     variant="determinate"
-                    value={(strengthLevel.minScore / PasswordStrengthLevels.length) * 100}
+                    value={(strengthLevel.minScore / 5) * 100}
                     sx={{
                       height: 6,
                       borderRadius: 3,

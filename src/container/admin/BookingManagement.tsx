@@ -4,14 +4,15 @@ import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, Grid, Chip, IconButton, useTheme, alpha,
   styled, LinearProgress, Tabs, Tab, Divider, Card, TextField,
-  MenuItem, Select, FormControl, InputLabel, Avatar} from '@mui/material';
+  MenuItem, Select, FormControl, InputLabel, Avatar
+} from '@mui/material';
 import {
   Close as CloseIcon,
   Send as SendIcon, Download as DownloadIcon, Save as SaveIcon,
   Receipt as ReceiptIcon, Payment as PaymentIcon,
   AttachMoney as MoneyIcon, History as HistoryIcon, Edit as EditIcon,
   Person as PersonIcon,
-  Phone as PhoneIcon,  LocationOn as LocationOnIcon,
+  Phone as PhoneIcon, LocationOn as LocationOnIcon,
   Category as CategoryIcon, CalendarToday as CalendarTodayIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
@@ -22,84 +23,21 @@ import { UniversalTable, Column, ACTION_KEY } from '@/components/uncontrolled/Un
 import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastMessage';
 import { adminService } from '@/services/AdminService';
 import { ganpatiService } from '@/services/GanpatiService';
-import { GanpatiResponseDto, ConfirmedBooking, ConfirmedBookingRequest } from '@/types/MurtiType';
+import {
+  GanpatiResponseDto,
+  ConfirmedBooking,
+  ConfirmedBookingRequest,
+  BookingFormData,
+  BookingRecord,
+  ViewBookingData,
+  InstallmentData
+} from '@/types/MurtiType';
 import { downloadReceiptPDF, generateReceiptMessage } from '@/utils/ReceiptGenerator';
 import { sendWhatsAppMessages } from '@/utils/Whatsapp';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-
-interface BookingFormData {
-  customerId: string;
-  customerName: string;
-  customerPhone: string;
-  customerAddress: string;
-  customerTaluka: string;
-  customerDistrict: string;
-  mandalName: string;
-  ganpatiId: string;
-  advancePayment: number;
-  remainingPayment: number;
-  totalPrice: number;
-  bookingDate: string;
-  notes: string;
-  status: string;
-  registrationType: string;
-  contactPerson1Name: string;
-  contactPerson1Phone: string;
-  contactPerson1Designation: string;
-  contactPerson2Name: string;
-  contactPerson2Phone: string;
-  contactPerson2Designation: string;
-}
-
-interface BookingRecord extends Record<string, unknown> {
-  id: string;
-  customerName?: string;
-  customer?: { name: string; registrationType?: string };
-  ganpati?: { name: string; images?: string[] };
-  totalPrice?: number;
-  advancePayment?: number;
-  remainingPayment?: number;
-  status: string;
-  registrationType?: string;
-}
-
-interface ViewBookingData {
-  id: string;
-  receiptNumber: string;
-  customerName: string;
-  customerPhone: string;
-  customerAddress: string;
-  customerTaluka: string;
-  customerDistrict: string;
-  mandalName: string;
-  ganpatiName: string;
-  ganpatiHeight: string;
-  ganpatiPrice: number;
-  ganpatiImages: string[];
-  advancePayment: number;
-  remainingPayment: number;
-  totalPrice: number;
-  totalPaidSoFar: number;
-  bookingDate: string;
-  actualPickupDate: string;
-  notes: string;
-  status: string;
-  createdAt: string;
-  contactPersons: Array<{ name: string; phone: string; designation: string }>;
-  paymentHistory: Array<{ amount: number; date: string; type: string; notes: string; remainingAfter: number }>;
-}
-
-interface InstallmentData {
-  id: number;
-  remainingAmount: number;
-  paidAmount: number;
-  newRemaining: number;
-  date: string;
-  isFinal: boolean;
-}
 
 const MAX_AMOUNT = 10000000;
 
@@ -125,11 +63,11 @@ const StatCard = styled(Card)(({ theme }) => ({
 }));
 
 const ViewDetailRow = ({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) => (
-  <Box sx={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: 1.5, 
-    py: 1, 
+  <Box sx={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1.5,
+    py: 1,
     borderBottom: '1px solid #f0f0f0',
     '&:last-child': { borderBottom: 'none' }
   }}>
@@ -144,23 +82,24 @@ const ViewDetailRow = ({ label, value, icon }: { label: string; value: string | 
 );
 
 const StatusChip = ({ status }: { status: string }) => {
+  const { t } = useTranslation();
   const config: Record<string, { label: string; color: string; bg: string }> = {
-    COMPLETED: { label: '✅ पूर्ण', color: '#2e7d32', bg: '#e8f5e9' },
-    PENDING: { label: '⏳ प्रलंबित', color: '#ed6c02', bg: '#fff3e0' },
-    CANCELLED: { label: '❌ रद्द', color: '#d32f2f', bg: '#ffebee' },
+    COMPLETED: { label: t('booking.completed'), color: '#2e7d32', bg: '#e8f5e9' },
+    PENDING: { label: t('booking.pending'), color: '#ed6c02', bg: '#fff3e0' },
+    CANCELLED: { label: t('booking.cancelled'), color: '#d32f2f', bg: '#ffebee' },
   };
   const c = config[status] || { label: status, color: '#666', bg: '#f5f5f5' };
   return (
-    <Chip 
-      label={c.label} 
-      size="small" 
-      sx={{ 
-        bgcolor: c.bg, 
-        color: c.color, 
-        fontWeight: 600, 
+    <Chip
+      label={c.label}
+      size="small"
+      sx={{
+        bgcolor: c.bg,
+        color: c.color,
+        fontWeight: 600,
         height: 28,
         '& .MuiChip-label': { fontSize: '0.75rem', px: 1.5 }
-      }} 
+      }}
     />
   );
 };
@@ -179,7 +118,7 @@ export default function BookingManagement() {
   const [tabValue, setTabValue] = useState(0);
   const [actionType, setActionType] = useState<'submit' | 'send' | 'download'>('submit');
   const [installments, setInstallments] = useState<InstallmentData[]>([]);
-  const [paymentHistory, setPaymentHistory] = useState<Array<{ amount: number; date: string; type: string; notes: string; remainingAfter: number }>>([]);
+  const [paymentHistory, setPaymentHistory] = useState<ViewBookingData['paymentHistory']>([]);
 
   const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
@@ -251,7 +190,7 @@ export default function BookingManagement() {
     if (editingBooking && dialogOpen) {
       const remaining = editingBooking.remainingPayment || 0;
       const history = editingBooking.paymentHistory || [];
-      
+
       setPaymentHistory(history.map((p) => ({
         amount: p.amount || 0,
         date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
@@ -381,7 +320,7 @@ export default function BookingManagement() {
   };
 
   const handleDelete = async (booking: ConfirmedBooking): Promise<void> => {
-    const confirmed = await showConfirmation(t('msg.delete_confirm'), 'Confirm');
+    const confirmed = await showConfirmation(t('msg.delete_confirm'), t('common.confirm_action'));
     if (confirmed) {
       const response = await adminService.deleteBooking(booking.id);
       if (response.success) {
@@ -395,7 +334,7 @@ export default function BookingManagement() {
 
   const handleSendReceipt = async (booking: ConfirmedBooking): Promise<void> => {
     if (!booking.customer && !booking.customerPhone) {
-      showSnackbar('warning', 'Customer phone number not available');
+      showSnackbar('warning', t('booking.no_phone_number'));
       return;
     }
 
@@ -418,7 +357,7 @@ export default function BookingManagement() {
     }
 
     if (contactNumbers.length === 0) {
-      showSnackbar('warning', 'No phone numbers available');
+      showSnackbar('warning', t('booking.no_phone_number'));
       return;
     }
 
@@ -548,7 +487,7 @@ export default function BookingManagement() {
 
     setSubmitting(true);
     setActionType(action);
-    
+
     try {
       const additionalContacts: { name: string; phone: string; designation: string }[] = [];
 
@@ -556,7 +495,7 @@ export default function BookingManagement() {
         additionalContacts.push({
           name: data.contactPerson1Name,
           phone: data.contactPerson1Phone,
-          designation: data.contactPerson1Designation || 'Contact Person',
+          designation: data.contactPerson1Designation || t('common.contact_person'),
         });
       }
 
@@ -564,7 +503,7 @@ export default function BookingManagement() {
         additionalContacts.push({
           name: data.contactPerson2Name,
           phone: data.contactPerson2Phone,
-          designation: data.contactPerson2Designation || 'Contact Person',
+          designation: data.contactPerson2Designation || t('common.contact_person'),
         });
       }
 
@@ -688,16 +627,12 @@ export default function BookingManagement() {
   };
 
   const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'default' => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'success';
-      case 'PENDING':
-        return 'warning';
-      case 'CANCELLED':
-        return 'error';
-      default:
-        return 'default';
-    }
+    const statusMap: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
+      'COMPLETED': 'success',
+      'PENDING': 'warning',
+      'CANCELLED': 'error',
+    };
+    return statusMap[status] || 'default';
   };
 
   const getFilteredBookings = () => {
@@ -719,8 +654,8 @@ export default function BookingManagement() {
         return (
           <Box display="flex" alignItems="center" gap={1}>
             {ganpati?.images?.[0] && (
-              <Avatar 
-                src={ganpati.images[0]} 
+              <Avatar
+                src={ganpati.images[0]}
                 sx={{ width: 30, height: 30, borderRadius: 1 }}
               />
             )}
@@ -771,19 +706,26 @@ export default function BookingManagement() {
     {
       key: 'status',
       label: t('booking.status'),
-      render: (row) => (
-        <Chip 
-          label={row.status === 'COMPLETED' ? 'Completed' : row.status} 
-          size="small" 
-          color={getStatusColor(row.status)} 
-        />
-      ),
+      render: (row) => {
+        const statusMap: Record<string, string> = {
+          'COMPLETED': t('booking.completed'),
+          'PENDING': t('booking.pending'),
+          'CANCELLED': t('booking.cancelled'),
+        };
+        return (
+          <Chip
+            label={statusMap[row.status] || row.status}
+            size="small"
+            color={getStatusColor(row.status)}
+          />
+        );
+      },
     },
     { key: ACTION_KEY, label: t('table.actions') },
   ];
 
   const filteredBookings = getFilteredBookings();
-  
+
   const totalAmount = filteredBookings.reduce((sum, row) => sum + (Number(row.totalPrice) || 0), 0);
   const paidAmount = filteredBookings.reduce((sum, row) => sum + (Number(row.advancePayment) || 0), 0);
 
@@ -823,15 +765,15 @@ export default function BookingManagement() {
               {t('admin.bookings')}
             </Typography>
             <Box display="flex" gap={1} flexWrap="wrap">
-              <Chip 
-                label={`${bookings.filter((b) => b.status === 'COMPLETED').length} Completed`} 
-                color="success" 
-                size="small" 
+              <Chip
+                label={`${bookings.filter((b) => b.status === 'COMPLETED').length} ${t('booking.completed')}`}
+                color="success"
+                size="small"
               />
-              <Chip 
-                label={`${bookings.filter((b) => b.status === 'PENDING').length} Pending`} 
-                color="warning" 
-                size="small" 
+              <Chip
+                label={`${bookings.filter((b) => b.status === 'PENDING').length} ${t('booking.pending')}`}
+                color="warning"
+                size="small"
               />
             </Box>
           </Box>
@@ -841,7 +783,7 @@ export default function BookingManagement() {
               <StatCard>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
-                    <Typography variant="caption" color="textSecondary">Total Amount (TA)</Typography>
+                    <Typography variant="caption" color="textSecondary">{t('booking.total_amount_ta')}</Typography>
                     <Typography variant="h5" fontWeight={700} sx={{ color: '#d32f2f' }}>
                       ₹{totalAmount.toLocaleString()}
                     </Typography>
@@ -856,7 +798,7 @@ export default function BookingManagement() {
               <StatCard>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
-                    <Typography variant="caption" color="textSecondary">Paid Amount (PA)</Typography>
+                    <Typography variant="caption" color="textSecondary">{t('booking.paid_amount_pa')}</Typography>
                     <Typography variant="h5" fontWeight={700} sx={{ color: '#2e7d32' }}>
                       ₹{paidAmount.toLocaleString()}
                     </Typography>
@@ -871,7 +813,7 @@ export default function BookingManagement() {
               <StatCard>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
-                    <Typography variant="caption" color="textSecondary">TA - PA (Remaining)</Typography>
+                    <Typography variant="caption" color="textSecondary">{t('booking.remaining_amount')}</Typography>
                     <Typography variant="h5" fontWeight={700} sx={{ color: '#ed6c02' }}>
                       ₹{(totalAmount - paidAmount).toLocaleString()}
                     </Typography>
@@ -909,7 +851,7 @@ export default function BookingManagement() {
 
             <Box sx={{ px: 2, py: 1, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', bgcolor: alpha(theme.palette.primary.main, 0.02), borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
               <Typography variant="caption" fontWeight={600} color="textSecondary">
-                TA = Total Amount | PA = Paid Amount | Remaining = TA - PA 
+                {t('booking.ta_pa_legend')}
               </Typography>
             </Box>
 
@@ -976,12 +918,12 @@ export default function BookingManagement() {
               <Box sx={{ position: 'relative', zIndex: 1 }}>
                 <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                   <PaymentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  {editingBooking ? 'Edit Booking' : 'New Booking'}
+                  {editingBooking ? t('booking.edit') : t('booking.add')}
                 </Typography>
                 {editingBooking && editingBooking.ganpati?.images?.[0] && (
                   <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-                    <Avatar 
-                      src={editingBooking.ganpati.images[0]} 
+                    <Avatar
+                      src={editingBooking.ganpati.images[0]}
                       sx={{ width: 30, height: 30, borderRadius: 1 }}
                     />
                     <Typography variant="caption" sx={{ opacity: 0.9 }}>
@@ -1000,13 +942,13 @@ export default function BookingManagement() {
                 <Card sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
                   <Grid container spacing={1}>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <Typography variant="caption" color="textSecondary">Customer</Typography>
+                      <Typography variant="caption" color="textSecondary">{t('booking.customer')}</Typography>
                       <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                         {watch('customerName') || 'N/A'}
                       </Typography>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <Typography variant="caption" color="textSecondary">Phone</Typography>
+                      <Typography variant="caption" color="textSecondary">{t('customer.phone')}</Typography>
                       <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                         {watch('customerPhone') || 'N/A'}
                       </Typography>
@@ -1019,7 +961,7 @@ export default function BookingManagement() {
                     <Controller
                       name="ganpatiId"
                       control={control}
-                      rules={{ required: 'Please select a Ganpati' }}
+                      rules={{ required: t('validation.required') }}
                       render={({ field, fieldState }) => {
                         const selectedGanpati = ganpatiList.find((g) => g.id === field.value);
                         if (selectedGanpati && !editingBooking) {
@@ -1027,8 +969,8 @@ export default function BookingManagement() {
                         }
                         return (
                           <FormControl fullWidth size="small" error={!!fieldState.error}>
-                            <InputLabel>Select Ganpati</InputLabel>
-                            <Select {...field} label="Select Ganpati">
+                            <InputLabel>{t('booking.select_ganpati')}</InputLabel>
+                            <Select {...field} label={t('booking.select_ganpati')}>
                               {ganpatiOptions.map((opt) => (
                                 <MenuItem key={opt.value} value={opt.value}>
                                   {opt.label}
@@ -1048,13 +990,13 @@ export default function BookingManagement() {
                     <Controller
                       name="totalPrice"
                       control={control}
-                      rules={{ required: 'Total price is required', min: 0 }}
+                      rules={{ required: t('validation.required'), min: 0 }}
                       render={({ field, fieldState }) => (
                         <TextField
                           {...field}
                           fullWidth
                           size="small"
-                          label="Total Price"
+                          label={t('booking.total')}
                           type="number"
                           InputProps={{ inputProps: { min: 0, max: MAX_AMOUNT } }}
                           error={!!fieldState.error}
@@ -1072,13 +1014,13 @@ export default function BookingManagement() {
                     <Controller
                       name="advancePayment"
                       control={control}
-                      rules={{ required: 'Advance payment is required', min: 0 }}
+                      rules={{ required: t('validation.required'), min: 0 }}
                       render={({ field, fieldState }) => (
                         <TextField
                           {...field}
                           fullWidth
                           size="small"
-                          label="Advance Payment"
+                          label={t('booking.advance')}
                           type="number"
                           InputProps={{ inputProps: { min: 0, max: MAX_AMOUNT } }}
                           error={!!fieldState.error}
@@ -1101,7 +1043,7 @@ export default function BookingManagement() {
                           {...field}
                           fullWidth
                           size="small"
-                          label="Remaining Amount"
+                          label={t('booking.remaining')}
                           type="number"
                           InputProps={{ readOnly: true }}
                           sx={{ '& input': { fontSize: { xs: '0.9rem', sm: '1rem' } } }}
@@ -1117,7 +1059,7 @@ export default function BookingManagement() {
                       render={({ field }) => (
                         <DatePicker
                           {...field}
-                          label="Booking Date"
+                          label={t('booking.booking_date')}
                           slotProps={{ textField: { size: 'small', fullWidth: true } }}
                           value={field.value ? dayjs(field.value) : null}
                           onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
@@ -1131,11 +1073,11 @@ export default function BookingManagement() {
 
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <MoneyIcon color="primary" />
-                  Installment Payments
-                  <Chip 
-                    label={`${installments.filter((i) => i.paidAmount > 0).length} payments made`} 
-                    size="small" 
-                    color="success" 
+                  {t('booking.installment_payments')}
+                  <Chip
+                    label={`${installments.filter((i) => i.paidAmount > 0).length} ${t('booking.payments_made')}`}
+                    size="small"
+                    color="success"
                   />
                 </Typography>
 
@@ -1143,25 +1085,25 @@ export default function BookingManagement() {
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <HistoryIcon fontSize="small" />
-                      Payment History
+                      {t('booking.payment_history')}
                     </Typography>
                     {paymentHistory.map((record, idx) => (
                       <Paper key={idx} sx={{ p: 1.5, mb: 1, borderRadius: 2, bgcolor: '#faf8f6' }}>
                         <Grid container spacing={1} alignItems="center">
                           <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">Date</Typography>
+                            <Typography variant="caption" color="textSecondary">{t('booking.date')}</Typography>
                             <Typography variant="body2">{record.date}</Typography>
                           </Grid>
                           <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">Amount</Typography>
+                            <Typography variant="caption" color="textSecondary">{t('booking.amount')}</Typography>
                             <Typography variant="body2" fontWeight={600} color="primary">₹{record.amount.toLocaleString()}</Typography>
                           </Grid>
                           <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">Type</Typography>
+                            <Typography variant="caption" color="textSecondary">{t('booking.type')}</Typography>
                             <Chip label={record.type} size="small" sx={{ fontSize: 10, height: 18 }} />
                           </Grid>
                           <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">Remaining</Typography>
+                            <Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography>
                             <Typography variant="body2" fontWeight={600} color="error">₹{record.remainingAfter.toLocaleString()}</Typography>
                           </Grid>
                         </Grid>
@@ -1174,13 +1116,13 @@ export default function BookingManagement() {
                   <Card key={inst.id} sx={{ mb: 2, p: 2, borderRadius: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}` }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} flexWrap="wrap" gap={1}>
                       <Typography variant="subtitle2" fontWeight={600}>
-                        Installment #{inst.id}
+                        {t('booking.installment')} #{inst.id}
                         {inst.isFinal && (
-                          <Chip label="Final" size="small" color="success" sx={{ ml: 1 }} />
+                          <Chip label={t('booking.final')} size="small" color="success" sx={{ ml: 1 }} />
                         )}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        Remaining: ₹{inst.remainingAmount.toLocaleString()}
+                        {t('booking.remaining')}: ₹{inst.remainingAmount.toLocaleString()}
                       </Typography>
                     </Box>
                     <Grid container spacing={2}>
@@ -1188,7 +1130,7 @@ export default function BookingManagement() {
                         <TextField
                           fullWidth
                           size="small"
-                          label="Remaining"
+                          label={t('booking.remaining')}
                           value={inst.remainingAmount.toLocaleString()}
                           InputProps={{ readOnly: true }}
                           sx={{ '& input': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
@@ -1198,7 +1140,7 @@ export default function BookingManagement() {
                         <TextField
                           fullWidth
                           size="small"
-                          label="Pay Amount"
+                          label={t('booking.pay_amount')}
                           type="number"
                           value={inst.paidAmount || ''}
                           InputProps={{ inputProps: { min: 0, max: inst.remainingAmount } }}
@@ -1212,7 +1154,7 @@ export default function BookingManagement() {
                         <TextField
                           fullWidth
                           size="small"
-                          label="New Remaining"
+                          label={t('booking.new_remaining')}
                           value={inst.newRemaining.toLocaleString()}
                           InputProps={{ readOnly: true }}
                           sx={{ '& input': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
@@ -1229,14 +1171,14 @@ export default function BookingManagement() {
                     startIcon={<PaymentIcon />}
                     sx={{ mb: 2, borderRadius: 30, width: { xs: '100%', sm: 'auto' } }}
                   >
-                    Add Another Installment
+                    {t('booking.add_installment')}
                   </Button>
                 )}
 
                 {installments.length > 0 && installments[installments.length - 1].newRemaining === 0 && (
                   <Box sx={{ mb: 2, p: 2, bgcolor: alpha(theme.palette.success.main, 0.1), borderRadius: 2, border: `1px solid ${theme.palette.success.main}` }}>
                     <Typography variant="body2" color="success.main" fontWeight={600}>
-                      All payments completed! Booking will be marked as COMPLETED.
+                      {t('booking.all_payments_completed')}
                     </Typography>
                   </Box>
                 )}
@@ -1251,10 +1193,10 @@ export default function BookingManagement() {
                           {...field}
                           fullWidth
                           size="small"
-                          label="Notes"
+                          label={t('booking.notes')}
                           multiline
                           rows={2}
-                          placeholder="Add payment notes..."
+                          placeholder={t('booking.add_payment_notes')}
                           sx={{ '& textarea': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
                         />
                       )}
@@ -1275,33 +1217,33 @@ export default function BookingManagement() {
                 disabled={submitting}
                 onClick={() => handleSubmit((data) => onSubmit(data, 'submit'))()}
                 startIcon={<SaveIcon />}
-                sx={{ 
+                sx={{
                   bgcolor: '#1976d2',
                   flex: { xs: 1, sm: 'none' },
                   '&:hover': { bgcolor: '#1565c0' }
                 }}
               >
-                {submitting && actionType === 'submit' ? t('table.loading') : 'Save Only'}
+                {submitting && actionType === 'submit' ? t('table.loading') : t('booking.save_only')}
               </Button>
               <Button
                 variant="contained"
                 disabled={submitting}
                 onClick={() => handleSubmit((data) => onSubmit(data, 'send'))()}
                 startIcon={<SendIcon />}
-                sx={{ 
+                sx={{
                   bgcolor: '#25D366',
                   flex: { xs: 1, sm: 'none' },
                   '&:hover': { bgcolor: '#128C7E' }
                 }}
               >
-                {submitting && actionType === 'send' ? t('table.loading') : 'Save & Send'}
+                {submitting && actionType === 'send' ? t('table.loading') : t('booking.save_send')}
               </Button>
               <Button
                 variant="contained"
                 disabled={submitting}
                 onClick={() => handleSubmit((data) => onSubmit(data, 'download'))()}
                 startIcon={<DownloadIcon />}
-                sx={{ 
+                sx={{
                   background: 'linear-gradient(135deg, #E65100, #FF8F00)',
                   flex: { xs: 1, sm: 'none' },
                   '&:hover': {
@@ -1311,12 +1253,12 @@ export default function BookingManagement() {
                   transition: 'all 0.3s ease',
                 }}
               >
-                {submitting && actionType === 'download' ? t('table.loading') : 'Save & Download'}
+                {submitting && actionType === 'download' ? t('table.loading') : t('booking.save_download')}
               </Button>
             </DialogActions>
           </Dialog>
 
-          {/* View Dialog */}
+          {/* View Dialog - Keep the same as before with translations */}
           <Dialog
             open={viewDialogOpen}
             onClose={() => setViewDialogOpen(false)}
@@ -1340,7 +1282,7 @@ export default function BookingManagement() {
               <Box display="flex" alignItems="center" gap={1.5}>
                 <ReceiptIcon sx={{ fontSize: 28 }} />
                 <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                  Booking Details
+                  {t('booking.booking_details')}
                 </Typography>
               </Box>
               <Box display="flex" alignItems="center" gap={1}>
@@ -1356,67 +1298,67 @@ export default function BookingManagement() {
                 <Box>
                   <Grid container spacing={2} sx={{ mb: 3 }}>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <Paper sx={{ 
-                        p: 2.5, 
-                        borderRadius: 3, 
+                      <Paper sx={{
+                        p: 2.5,
+                        borderRadius: 3,
                         bgcolor: 'white',
                         boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                         border: '1px solid #f0ebe6',
                         height: '100%'
                       }}>
                         <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PersonIcon fontSize="small" /> Customer Information
+                          <PersonIcon fontSize="small" /> {t('booking.customer_info')}
                         </Typography>
-                        <ViewDetailRow label="Name" value={viewBooking.customerName} icon={<PersonIcon sx={{ fontSize: 18 }} />} />
-                        <ViewDetailRow label="Phone" value={viewBooking.customerPhone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
+                        <ViewDetailRow label={t('customer.name')} value={viewBooking.customerName} icon={<PersonIcon sx={{ fontSize: 18 }} />} />
+                        <ViewDetailRow label={t('customer.phone')} value={viewBooking.customerPhone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
                         {viewBooking.mandalName && viewBooking.mandalName !== 'N/A' && (
-                          <ViewDetailRow label="Mandal" value={viewBooking.mandalName} />
+                          <ViewDetailRow label={t('customer.mandal_name')} value={viewBooking.mandalName} />
                         )}
-                        <ViewDetailRow label="Address" value={viewBooking.customerAddress} icon={<LocationOnIcon sx={{ fontSize: 18 }} />} />
+                        <ViewDetailRow label={t('customer.address')} value={viewBooking.customerAddress} icon={<LocationOnIcon sx={{ fontSize: 18 }} />} />
                       </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <Paper sx={{ 
-                        p: 2.5, 
-                        borderRadius: 3, 
+                      <Paper sx={{
+                        p: 2.5,
+                        borderRadius: 3,
                         bgcolor: 'white',
                         boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                         border: '1px solid #f0ebe6',
                         height: '100%'
                       }}>
                         <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CategoryIcon fontSize="small" /> Ganpati Information
+                          <CategoryIcon fontSize="small" /> {t('booking.ganpati_info')}
                         </Typography>
                         {viewBooking.ganpatiImages && viewBooking.ganpatiImages.length > 0 && (
                           <Box sx={{ mb: 2 }}>
-                            <Avatar 
-                              src={viewBooking.ganpatiImages[0]} 
+                            <Avatar
+                              src={viewBooking.ganpatiImages[0]}
                               sx={{ width: 60, height: 60, borderRadius: 2 }}
                             />
                           </Box>
                         )}
-                        <ViewDetailRow label="Name" value={viewBooking.ganpatiName} />
-                        <ViewDetailRow label="Height" value={viewBooking.ganpatiHeight} />
-                        <ViewDetailRow label="Price" value={`₹${viewBooking.ganpatiPrice?.toLocaleString() || 0}`} />
+                        <ViewDetailRow label={t('ganpati.name')} value={viewBooking.ganpatiName} />
+                        <ViewDetailRow label={t('ganpati.height')} value={viewBooking.ganpatiHeight} />
+                        <ViewDetailRow label={t('ganpati.price')} value={`₹${viewBooking.ganpatiPrice?.toLocaleString() || 0}`} />
                       </Paper>
                     </Grid>
                   </Grid>
 
-                  <Paper sx={{ 
-                    p: 2.5, 
-                    borderRadius: 3, 
+                  <Paper sx={{
+                    p: 2.5,
+                    borderRadius: 3,
                     bgcolor: 'white',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                     border: '1px solid #f0ebe6',
                     mb: 3
                   }}>
                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <MoneyIcon fontSize="small" /> Payment Summary
+                      <MoneyIcon fontSize="small" /> {t('booking.payment_summary')}
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Box sx={{ p: 1.5, bgcolor: '#fff5f0', borderRadius: 2, textAlign: 'center' }}>
-                          <Typography variant="caption" color="textSecondary">Total Price</Typography>
+                          <Typography variant="caption" color="textSecondary">{t('booking.total')}</Typography>
                           <Typography variant="h6" fontWeight={700} sx={{ color: '#d32f2f' }}>
                             ₹{viewBooking.totalPrice?.toLocaleString() || 0}
                           </Typography>
@@ -1424,7 +1366,7 @@ export default function BookingManagement() {
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Box sx={{ p: 1.5, bgcolor: '#e8f5e9', borderRadius: 2, textAlign: 'center' }}>
-                          <Typography variant="caption" color="textSecondary">Paid So Far</Typography>
+                          <Typography variant="caption" color="textSecondary">{t('booking.paid_so_far')}</Typography>
                           <Typography variant="h6" fontWeight={700} sx={{ color: '#2e7d32' }}>
                             ₹{viewBooking.totalPaidSoFar?.toLocaleString() || 0}
                           </Typography>
@@ -1432,7 +1374,7 @@ export default function BookingManagement() {
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Box sx={{ p: 1.5, bgcolor: '#fff3e0', borderRadius: 2, textAlign: 'center' }}>
-                          <Typography variant="caption" color="textSecondary">Remaining</Typography>
+                          <Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography>
                           <Typography variant="h6" fontWeight={700} sx={{ color: '#ed6c02' }}>
                             ₹{viewBooking.remainingPayment?.toLocaleString() || 0}
                           </Typography>
@@ -1442,41 +1384,41 @@ export default function BookingManagement() {
                   </Paper>
 
                   {viewBooking.paymentHistory && viewBooking.paymentHistory.length > 0 && (
-                    <Paper sx={{ 
-                      p: 2.5, 
-                      borderRadius: 3, 
+                    <Paper sx={{
+                      p: 2.5,
+                      borderRadius: 3,
                       bgcolor: 'white',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                       border: '1px solid #f0ebe6',
                       mb: 3
                     }}>
                       <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <HistoryIcon fontSize="small" /> Payment History
+                        <HistoryIcon fontSize="small" /> {t('booking.payment_history')}
                       </Typography>
                       {viewBooking.paymentHistory.map((record, idx) => (
-                        <Box key={idx} sx={{ 
-                          p: 1.5, 
-                          mb: 1, 
-                          borderRadius: 2, 
+                        <Box key={idx} sx={{
+                          p: 1.5,
+                          mb: 1,
+                          borderRadius: 2,
                           bgcolor: '#faf8f6',
                           border: '1px solid #f0ebe6',
                           '&:last-child': { mb: 0 }
                         }}>
                           <Grid container spacing={1} alignItems="center">
                             <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">Date</Typography>
+                              <Typography variant="caption" color="textSecondary">{t('booking.date')}</Typography>
                               <Typography variant="body2" fontWeight={500}>{record.date}</Typography>
                             </Grid>
                             <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">Amount</Typography>
+                              <Typography variant="caption" color="textSecondary">{t('booking.amount')}</Typography>
                               <Typography variant="body2" fontWeight={600} color="primary">₹{record.amount?.toLocaleString() || 0}</Typography>
                             </Grid>
                             <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">Type</Typography>
+                              <Typography variant="caption" color="textSecondary">{t('booking.type')}</Typography>
                               <Chip label={record.type || 'INSTALLMENT'} size="small" sx={{ fontSize: 10, height: 20 }} />
                             </Grid>
                             <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">Remaining</Typography>
+                              <Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography>
                               <Typography variant="body2" fontWeight={600} color="error">₹{record.remainingAfter?.toLocaleString() || 0}</Typography>
                             </Grid>
                           </Grid>
@@ -1485,44 +1427,44 @@ export default function BookingManagement() {
                     </Paper>
                   )}
 
-                  <Paper sx={{ 
-                    p: 2.5, 
-                    borderRadius: 3, 
+                  <Paper sx={{
+                    p: 2.5,
+                    borderRadius: 3,
                     bgcolor: 'white',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                     border: '1px solid #f0ebe6',
                     mb: 3
                   }}>
                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CalendarTodayIcon fontSize="small" /> Dates & Status
+                      <CalendarTodayIcon fontSize="small" /> {t('booking.dates_status')}
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12, sm: 6 }}>
-                        <ViewDetailRow label="Booking Date" value={viewBooking.bookingDate} icon={<CalendarTodayIcon sx={{ fontSize: 18 }} />} />
+                        <ViewDetailRow label={t('booking.booking_date')} value={viewBooking.bookingDate} icon={<CalendarTodayIcon sx={{ fontSize: 18 }} />} />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
-                        <ViewDetailRow label="Created At" value={viewBooking.createdAt} />
+                        <ViewDetailRow label={t('booking.created_at')} value={viewBooking.createdAt} />
                       </Grid>
                     </Grid>
                   </Paper>
 
                   {viewBooking.contactPersons && viewBooking.contactPersons.length > 0 && (
-                    <Paper sx={{ 
-                      p: 2.5, 
-                      borderRadius: 3, 
+                    <Paper sx={{
+                      p: 2.5,
+                      borderRadius: 3,
                       bgcolor: 'white',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                       border: '1px solid #f0ebe6',
                       mb: 3
                     }}>
                       <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <PersonIcon fontSize="small" /> Contact Persons
+                        <PersonIcon fontSize="small" /> {t('booking.contact_persons')}
                       </Typography>
                       {viewBooking.contactPersons.map((person, idx) => (
-                        <Box key={idx} sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          py: 1, 
+                        <Box key={idx} sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          py: 1,
                           borderBottom: '1px dashed #f0ebe6',
                           flexWrap: 'wrap',
                           gap: 0.5,
@@ -1537,16 +1479,16 @@ export default function BookingManagement() {
                   )}
 
                   {viewBooking.notes && viewBooking.notes !== 'N/A' && (
-                    <Paper sx={{ 
-                      p: 2.5, 
-                      borderRadius: 3, 
+                    <Paper sx={{
+                      p: 2.5,
+                      borderRadius: 3,
                       bgcolor: 'white',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                       border: '1px solid #f0ebe6',
                       mb: 3
                     }}>
                       <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <InfoIcon fontSize="small" /> Notes
+                        <InfoIcon fontSize="small" /> {t('booking.notes')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#555', lineHeight: 1.6 }}>{viewBooking.notes}</Typography>
                     </Paper>
@@ -1560,14 +1502,14 @@ export default function BookingManagement() {
                         const booking = bookings.find((b) => b.id === viewBooking.id);
                         if (booking) handleSendReceipt(booking);
                       }}
-                      sx={{ 
-                        bgcolor: '#25D366', 
+                      sx={{
+                        bgcolor: '#25D366',
                         '&:hover': { bgcolor: '#128C7E' },
                         borderRadius: 3,
                         px: 3
                       }}
                     >
-                      Send Receipt
+                      {t('booking.send_receipt')}
                     </Button>
                     <Button
                       variant="contained"
@@ -1576,7 +1518,7 @@ export default function BookingManagement() {
                         const booking = bookings.find((b) => b.id === viewBooking.id);
                         if (booking) handleDownloadReceipt(booking);
                       }}
-                      sx={{ 
+                      sx={{
                         background: 'linear-gradient(135deg, #E65100, #FF8F00)',
                         '&:hover': {
                           transform: 'translateY(-2px)',
@@ -1587,7 +1529,7 @@ export default function BookingManagement() {
                         transition: 'all 0.3s ease',
                       }}
                     >
-                      Download PDF
+                      {t('booking.download_pdf')}
                     </Button>
                     <Button
                       variant="contained"
@@ -1597,14 +1539,14 @@ export default function BookingManagement() {
                         const booking = bookings.find((b) => b.id === viewBooking.id);
                         if (booking) handleEdit(booking);
                       }}
-                      sx={{ 
+                      sx={{
                         bgcolor: '#1976d2',
                         '&:hover': { bgcolor: '#1565c0' },
                         borderRadius: 3,
                         px: 3
                       }}
                     >
-                      Edit Booking
+                      {t('booking.edit_booking')}
                     </Button>
                   </Box>
                 </Box>
@@ -1613,7 +1555,7 @@ export default function BookingManagement() {
 
             <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6' }}>
               <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>
-                Close
+                {t('button.close')}
               </Button>
             </DialogActions>
           </Dialog>

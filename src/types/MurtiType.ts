@@ -3,7 +3,6 @@ export type UserRole = 'SUPER_ADMIN';
 
 export type RegistrationType = 'HOME' | 'MANDAL';
 
-
 export interface User {
   id: string;
   name: string;
@@ -252,4 +251,184 @@ export interface EnquiryFormData {
 export interface EnquiryResponse {
   customerId: string;
   message: string;
+}
+
+// ==================== Booking Management Types ====================
+export interface BookingFormData {
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerTaluka: string;
+  customerDistrict: string;
+  mandalName: string;
+  ganpatiId: string;
+  advancePayment: number;
+  remainingPayment: number;
+  totalPrice: number;
+  bookingDate: string;
+  notes: string;
+  status: string;
+  registrationType: string;
+  contactPerson1Name: string;
+  contactPerson1Phone: string;
+  contactPerson1Designation: string;
+  contactPerson2Name: string;
+  contactPerson2Phone: string;
+  contactPerson2Designation: string;
+}
+
+export interface BookingRecord extends Record<string, unknown> {
+  id: string;
+  customerName?: string;
+  customer?: { name: string; registrationType?: string };
+  ganpati?: { name: string; images?: string[] };
+  totalPrice?: number;
+  advancePayment?: number;
+  remainingPayment?: number;
+  status: string;
+  registrationType?: string;
+}
+
+export interface ViewBookingData {
+  id: string;
+  receiptNumber: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerTaluka: string;
+  customerDistrict: string;
+  mandalName: string;
+  ganpatiName: string;
+  ganpatiHeight: string;
+  ganpatiPrice: number;
+  ganpatiImages: string[];
+  advancePayment: number;
+  remainingPayment: number;
+  totalPrice: number;
+  totalPaidSoFar: number;
+  bookingDate: string;
+  actualPickupDate: string;
+  notes: string;
+  status: string;
+  createdAt: string;
+  contactPersons: Array<{ name: string; phone: string; designation: string }>;
+  paymentHistory: Array<{ amount: number; date: string; type: string; notes: string; remainingAfter: number }>;
+}
+
+export interface InstallmentData {
+  id: number;
+  remainingAmount: number;
+  paidAmount: number;
+  newRemaining: number;
+  date: string;
+  isFinal: boolean;
+}
+
+// ==================== Customer Management Types ====================
+export interface CustomerRecord extends Record<string, unknown> {
+  id: string;
+  name: string;
+  phone: string;
+  registrationType?: string;
+  mandalName?: string;
+  isPromoted?: boolean;
+  createdAt: string;
+  ganpatiName?: string;
+  ganpatiImage?: string;
+}
+
+export interface ViewCustomerData {
+  id: string;
+  name: string;
+  phone: string;
+  alternatePhone: string;
+  registrationType: string;
+  mandalName: string;
+  address: string;
+  city: string;
+  taluka: string;
+  district: string;
+  state: string;
+  isPromoted: boolean;
+  createdAt: string;
+  ganpatiName: string;
+  ganpatiImage: string;
+  contactPersons: Array<{ name: string; phone: string; designation: string }>;
+}
+
+export interface PromoteFormData {
+  ganpatiId: string;
+  totalPrice: number;
+  advancePayment: number;
+  remainingPayment: number;
+  bookingDate: string;
+  notes: string;
+}
+
+
+
+// ==================== Ganpati Management Types ====================
+export interface GanpatiRecord extends Record<string, unknown> {
+  id: string;
+  name: string;
+  height: string;
+  price: number;
+  availableSlots: number;
+  isActive: boolean;
+  images: string[];
+}
+
+// Height, Material, Color options
+export interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+export const heightOptions: DropdownOption[] = [
+  { value: '2ft', label: '2 Feet' },
+  { value: '3ft', label: '3 Feet' },
+  { value: '4ft', label: '4 Feet' },
+  { value: '5ft', label: '5 Feet' },
+  { value: '6ft', label: '6 Feet' },
+  { value: '7ft', label: '7 Feet' },
+];
+
+export const materialOptions: DropdownOption[] = [
+  { value: 'Eco Friendly', label: 'Eco Friendly' },
+  { value: 'Clay', label: 'Clay' },
+  { value: 'Plaster of Paris', label: 'Plaster of Paris' },
+];
+
+export const colorOptions: DropdownOption[] = [
+  { value: 'Traditional', label: 'Traditional' },
+  { value: 'Modern', label: 'Modern' },
+  { value: 'Royal', label: 'Royal' },
+  { value: 'Premium', label: 'Premium' },
+];
+export interface GanpatiRecord extends Record<string, unknown> {
+  id: string;
+  name: string;
+  height: string;
+  price: number;
+  availableSlots: number;
+  isActive: boolean;
+  images: string[];
+}
+
+// ==================== Dashboard Types ====================
+export interface StatItem {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+}
+
+export interface DashboardStats {
+  totalCustomers: number;
+  mandalCustomers: number;
+  totalGanpati: number;
+  totalBookings: number;
+  newThisMonth: number;
 }

@@ -16,6 +16,7 @@ import { ganpatiService } from '@/services/GanpatiService';
 import { GanpatiResponseDto } from '@/types/MurtiType';
 import { useTranslation } from 'react-i18next';
 import EnquiryForm from '@/container/public/EnquiryForm';
+import { config } from '@/constants/config';
 
 const OrangeBackground = styled(Box)({
   background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ff6b35)',
@@ -180,15 +181,16 @@ export default function GanpatiDetails() {
           sx={{ 
             mb: 1.5, 
             color: 'white',
-            minHeight: 36,
-            fontSize: { xs: '0.75rem', sm: '0.85rem' },
-            '&:hover': { bgcolor: alpha('#fff', 0.1) }
+            minHeight: { xs: 32, sm: 36 },
+            fontSize: { xs: '0.7rem', sm: '0.85rem' },
+            '&:hover': { bgcolor: alpha('#fff', 0.1) },
+            px: { xs: 1, sm: 2 }
           }}
         >
           {t('common.back')}
         </Button>
 
-        <GlassCard sx={{ mb: 1.5 }}>
+        <GlassCard sx={{ mb: 1.5, p: { xs: 1, sm: 1.5 } }}>
           <Paper 
             sx={{ 
               borderRadius: 2, 
@@ -196,7 +198,7 @@ export default function GanpatiDetails() {
               mb: 1.5,
               position: 'relative',
               cursor: 'pointer',
-              maxHeight: { xs: 250, sm: 300, md: 350 },
+              maxHeight: { xs: 200, sm: 250, md: 350 },
             }}
             onClick={() => setImageDialogOpen(true)}
           >
@@ -207,7 +209,7 @@ export default function GanpatiDetails() {
               sx={{ 
                 width: '100%', 
                 height: '100%',
-                maxHeight: { xs: 250, sm: 300, md: 350 },
+                maxHeight: { xs: 200, sm: 250, md: 350 },
                 objectFit: 'cover',
                 display: 'block'
               }}
@@ -218,7 +220,7 @@ export default function GanpatiDetails() {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                p: 1.5,
+                p: { xs: 1, sm: 1.5 },
                 background: 'linear-gradient(transparent, rgba(0,0,0,0.5))',
                 opacity: { xs: 1, sm: 0 },
                 transition: 'opacity 0.3s ease',
@@ -226,7 +228,7 @@ export default function GanpatiDetails() {
                 justifyContent: 'center',
               }}
             >
-              <Typography variant="caption" sx={{ color: 'white', fontSize: '0.65rem' }}>
+              <Typography variant="caption" sx={{ color: 'white', fontSize: { xs: '0.55rem', sm: '0.65rem' } }}>
                 {t('common.click_to_enlarge')}
               </Typography>
             </Box>
@@ -240,8 +242,8 @@ export default function GanpatiDetails() {
                   component="img"
                   src={img}
                   sx={{
-                    width: { xs: 40, sm: 50 },
-                    height: { xs: 40, sm: 50 },
+                    width: { xs: 35, sm: 50 },
+                    height: { xs: 35, sm: 50 },
                     borderRadius: 1,
                     objectFit: 'cover',
                     border: selectedImage === img ? '2px solid #d32f2f' : '1px solid #ddd',
@@ -255,12 +257,12 @@ export default function GanpatiDetails() {
           )}
 
           <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={0.5}>
-            <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.2rem' } }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: '0.95rem', sm: '1.2rem' } }}>
               {ganpati.name}
             </Typography>
-            <IconButton onClick={handleLike} sx={{ color: isLiked ? '#d32f2f' : 'inherit', p: 0.5 }}>
-              {isLiked ? <Favorite sx={{ fontSize: 18 }} /> : <FavoriteBorder sx={{ fontSize: 18 }} />}
-              <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
+            <IconButton onClick={handleLike} sx={{ color: isLiked ? '#d32f2f' : 'inherit', p: { xs: 0.3, sm: 0.5 } }}>
+              {isLiked ? <Favorite sx={{ fontSize: { xs: 16, sm: 18 } }} /> : <FavoriteBorder sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+              <Typography variant="caption" sx={{ ml: 0.3, fontWeight: 600, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}>
                 {likeCount}
               </Typography>
             </IconButton>
@@ -268,26 +270,26 @@ export default function GanpatiDetails() {
           
           <Box display="flex" alignItems="center" gap={0.5} mb={1} flexWrap="wrap">
             <Rating value={ganpati.rating || 0} precision={0.5} size="small" readOnly />
-            <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+            <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem' } }}>
               ({ganpati.rating || 0})
             </Typography>
             <Chip
               label={`${ganpati.availableSlots} ${t('ganpati.available')}`}
               size="small"
               color={ganpati.availableSlots > 0 ? 'success' : 'error'}
-              sx={{ height: 20, fontSize: '0.6rem' }}
+              sx={{ height: { xs: 18, sm: 20 }, fontSize: { xs: '0.5rem', sm: '0.6rem' } }}
             />
           </Box>
 
-          <Typography variant="h4" sx={{ color: '#d32f2f', fontWeight: 700, mb: 1, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+          <Typography variant="h4" sx={{ color: '#d32f2f', fontWeight: 700, mb: 1, fontSize: { xs: '1rem', sm: '1.5rem' } }}>
             ₹{ganpati.price.toLocaleString()}
           </Typography>
 
           {ganpati.description && (
             <Typography variant="body2" color="textSecondary" paragraph sx={{ 
               lineHeight: 1.4, 
-              fontSize: { xs: '0.75rem', sm: '0.85rem' },
-              maxHeight: { xs: 60, sm: 80 },
+              fontSize: { xs: '0.7rem', sm: '0.85rem' },
+              maxHeight: { xs: 50, sm: 80 },
               overflowY: 'auto',
             }}>
               {ganpati.description}
@@ -299,12 +301,12 @@ export default function GanpatiDetails() {
           <Grid container spacing={0.5} sx={{ mb: 1 }}>
             <Grid size={6}>
               <Box display="flex" alignItems="center" gap={0.5}>
-                <Height sx={{ fontSize: 14, color: '#666' }} />
+                <Height sx={{ fontSize: { xs: 12, sm: 14 }, color: '#666' }} />
                 <Box>
-                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.5rem', sm: '0.6rem' } }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.45rem', sm: '0.6rem' } }}>
                     {t('ganpati.height')}
                   </Typography>
-                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
+                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: '0.65rem', sm: '0.8rem' } }}>
                     {ganpati.height}
                   </Typography>
                 </Box>
@@ -312,12 +314,12 @@ export default function GanpatiDetails() {
             </Grid>
             <Grid size={6}>
               <Box display="flex" alignItems="center" gap={0.5}>
-                <Brush sx={{ fontSize: 14, color: '#666' }} />
+                <Brush sx={{ fontSize: { xs: 12, sm: 14 }, color: '#666' }} />
                 <Box>
-                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.5rem', sm: '0.6rem' } }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.45rem', sm: '0.6rem' } }}>
                     {t('ganpati.material')}
                   </Typography>
-                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
+                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: '0.65rem', sm: '0.8rem' } }}>
                     {ganpati.material}
                   </Typography>
                 </Box>
@@ -327,18 +329,18 @@ export default function GanpatiDetails() {
 
           {ganpati.achievements && ganpati.achievements.length > 0 && (
             <Box sx={{ mb: 1 }}>
-              <Typography variant="caption" display="flex" alignItems="center" gap={0.5} sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem' }, color: '#666' }}>
-                <EmojiEvents sx={{ fontSize: 12 }} /> {t('ganpati.achievements')}
+              <Typography variant="caption" display="flex" alignItems="center" gap={0.5} sx={{ fontSize: { xs: '0.55rem', sm: '0.7rem' }, color: '#666' }}>
+                <EmojiEvents sx={{ fontSize: { xs: 10, sm: 12 } }} /> {t('ganpati.achievements')}
               </Typography>
               <Box display="flex" flexWrap="wrap" gap={0.5}>
                 {ganpati.achievements.map((ach, idx) => (
                   <Chip 
                     key={idx} 
-                    icon={<Verified sx={{ fontSize: 12 }} />} 
+                    icon={<Verified sx={{ fontSize: { xs: 10, sm: 12 } }} />} 
                     label={ach} 
                     size="small" 
                     variant="outlined"
-                    sx={{ height: 20, fontSize: '0.55rem' }}
+                    sx={{ height: { xs: 18, sm: 20 }, fontSize: { xs: '0.45rem', sm: '0.55rem' } }}
                   />
                 ))}
               </Box>
@@ -352,11 +354,11 @@ export default function GanpatiDetails() {
               startIcon={<WhatsApp />}
               sx={{ 
                 bgcolor: '#25D366', 
-                py: { xs: 0.8, sm: 1 }, 
+                py: { xs: 0.6, sm: 1 }, 
                 borderRadius: 50,
-                minHeight: 36,
+                minHeight: { xs: 32, sm: 36 },
                 flex: 1,
-                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                fontSize: { xs: '0.6rem', sm: '0.75rem' },
                 '&:hover': { bgcolor: '#128C7E' }
               }}
             >
@@ -364,15 +366,15 @@ export default function GanpatiDetails() {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => window.location.href = 'tel:+919876543210'}
+              onClick={() => window.location.href = `tel:${config.CONTACT_PHONE.replace(/\s/g, '')}`}
               sx={{ 
-                py: { xs: 0.8, sm: 1 }, 
+                py: { xs: 0.6, sm: 1 }, 
                 borderRadius: 50, 
                 borderColor: '#d32f2f', 
                 color: '#d32f2f',
-                minHeight: 36,
+                minHeight: { xs: 32, sm: 36 },
                 flex: { xs: 1, sm: 0.5 },
-                fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                fontSize: { xs: '0.6rem', sm: '0.75rem' }
               }}
             >
               {t('common.call')}
@@ -382,12 +384,12 @@ export default function GanpatiDetails() {
               sx={{ 
                 border: '1px solid #ddd', 
                 borderRadius: 2, 
-                minHeight: 36, 
-                minWidth: 36,
+                minHeight: { xs: 32, sm: 36 }, 
+                minWidth: { xs: 32, sm: 36 },
                 bgcolor: 'white'
               }}
             >
-              <Share sx={{ fontSize: 18 }} />
+              <Share sx={{ fontSize: { xs: 16, sm: 18 } }} />
             </IconButton>
           </Box>
         </GlassCard>
@@ -403,15 +405,16 @@ export default function GanpatiDetails() {
             onClick={() => setImageDialogOpen(false)}
             sx={{
               position: 'absolute',
-              top: 16,
-              right: 16,
+              top: { xs: 12, sm: 16 },
+              right: { xs: 12, sm: 16 },
               color: 'white',
               bgcolor: 'rgba(0,0,0,0.5)',
               zIndex: 10,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+              p: { xs: 0.5, sm: 1 }
             }}
           >
-            <CloseIcon />
+            <CloseIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
           </IconButton>
           <Box
             component="img"
@@ -426,18 +429,18 @@ export default function GanpatiDetails() {
           <Box
             sx={{
               position: 'absolute',
-              bottom: 60,
+              bottom: { xs: 40, sm: 60 },
               left: 0,
               right: 0,
               textAlign: 'center',
               color: 'white',
-              p: 2,
+              p: { xs: 1.5, sm: 2 },
             }}
           >
-            <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+            <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.5rem' } }}>
               {ganpati.name}
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8, fontSize: { xs: '0.75rem', sm: '0.85rem' } }}>
+            <Typography variant="body2" sx={{ opacity: 0.8, fontSize: { xs: '0.7rem', sm: '0.85rem' } }}>
               {ganpati.height} • {ganpati.material}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 1.5, flexWrap: 'wrap' }}>
@@ -451,9 +454,10 @@ export default function GanpatiDetails() {
                 sx={{ 
                   bgcolor: '#25D366', 
                   '&:hover': { bgcolor: '#128C7E' },
-                  py: { xs: 0.8, sm: 1 },
-                  fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                  minHeight: 36,
+                  py: { xs: 0.6, sm: 1 },
+                  fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                  minHeight: { xs: 32, sm: 36 },
+                  px: { xs: 1.5, sm: 2 }
                 }}
               >
                 {t('ganpati.enquiry')}
@@ -466,9 +470,10 @@ export default function GanpatiDetails() {
                   borderColor: 'white', 
                   color: 'white', 
                   '&:hover': { borderColor: '#d32f2f', color: '#d32f2f' },
-                  py: { xs: 0.8, sm: 1 },
-                  fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                  minHeight: 36,
+                  py: { xs: 0.6, sm: 1 },
+                  fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                  minHeight: { xs: 32, sm: 36 },
+                  px: { xs: 1.5, sm: 2 }
                 }}
               >
                 {likeCount}

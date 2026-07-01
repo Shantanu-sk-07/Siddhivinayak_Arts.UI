@@ -19,7 +19,13 @@ import { UniversalTable, Column, ACTION_KEY } from '@/components/uncontrolled/Un
 import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastMessage';
 import { adminService } from '@/services/AdminService';
 import { ganpatiService } from '@/services/GanpatiService';
-import { User, GanpatiResponseDto } from '@/types/MurtiType';
+import { 
+  User, 
+  GanpatiResponseDto, 
+  CustomerRecord, 
+  ViewCustomerData, 
+  PromoteFormData 
+} from '@/types/MurtiType';
 import EnquiryForm from '@/container/public/EnquiryForm';
 import DropdownField from '@/components/controlled/DropdownField';
 import NumericField from '@/components/controlled/NumericField';
@@ -51,46 +57,6 @@ const ViewDetailRow = ({ label, value, icon }: { label: string; value: string | 
     </Typography>
   </Box>
 );
-
-interface CustomerRecord extends Record<string, unknown> {
-  id: string;
-  name: string;
-  phone: string;
-  registrationType?: string;
-  mandalName?: string;
-  isPromoted?: boolean;
-  createdAt: string;
-  ganpatiName?: string;
-  ganpatiImage?: string;
-}
-
-interface ViewCustomerData {
-  id: string;
-  name: string;
-  phone: string;
-  alternatePhone: string;
-  registrationType: string;
-  mandalName: string;
-  address: string;
-  city: string;
-  taluka: string;
-  district: string;
-  state: string;
-  isPromoted: boolean;
-  createdAt: string;
-  ganpatiName: string;
-  ganpatiImage: string;
-  contactPersons: Array<{ name: string; phone: string; designation: string }>;
-}
-
-interface PromoteFormData {
-  ganpatiId: string;
-  totalPrice: number;
-  advancePayment: number;
-  remainingPayment: number;
-  bookingDate: string;
-  notes: string;
-}
 
 const MAX_AMOUNT = 10000000;
 
@@ -200,7 +166,7 @@ export default function CustomerManagement() {
   };
 
   const handleDeleteCustomer = async (customer: User): Promise<void> => {
-    const confirmed = await showConfirmation(t('msg.delete_confirm'), 'Confirm');
+    const confirmed = await showConfirmation(t('msg.delete_confirm'), t('common.confirm_action'));
     if (confirmed) {
       try {
         const response = await adminService.deleteCustomer(customer.id);
@@ -219,7 +185,7 @@ export default function CustomerManagement() {
 
   const handlePromoteClick = (customer: User): void => {
     if (customer.isPromoted) {
-      showSnackbar('warning', 'Customer already promoted to booking');
+      showSnackbar('warning', t('customer.already_promoted'));
       return;
     }
     setSelectedCustomer(customer);
@@ -241,7 +207,7 @@ export default function CustomerManagement() {
     try {
       const promoteResponse = await adminService.promoteCustomer(selectedCustomer.id);
       if (!promoteResponse.success) {
-        showSnackbar('error', promoteResponse.message || 'Promotion failed');
+        showSnackbar('error', promoteResponse.message || t('customer.promotion_failed'));
         setSubmitting(false);
         return;
       }
@@ -273,15 +239,15 @@ export default function CustomerManagement() {
 
       const bookingResponse = await adminService.createBooking(bookingData);
       if (bookingResponse.success) {
-        showSnackbar('success', 'Customer successfully promoted to booking');
+        showSnackbar('success', t('customer.promotion_success'));
         setPromoteDialogOpen(false);
         await fetchCustomers();
       } else {
-        showSnackbar('error', bookingResponse.message || 'Booking creation failed');
+        showSnackbar('error', bookingResponse.message || t('customer.booking_creation_failed'));
       }
     } catch (error) {
       console.error('Error promoting customer:', error);
-      showSnackbar('error', 'Promotion failed');
+      showSnackbar('error', t('customer.promotion_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -331,10 +297,10 @@ export default function CustomerManagement() {
     },
     {
       key: 'isPromoted',
-      label: 'Status',
+      label: t('customer.status'),
       render: (row) => (
         <Chip
-          label={row.isPromoted ? 'Booked' : 'Pending'}
+          label={row.isPromoted ? t('customer.booked') : t('customer.pending')}
           size="small"
           color={row.isPromoted ? 'success' : 'warning'}
         />
@@ -342,7 +308,7 @@ export default function CustomerManagement() {
     },
     {
       key: 'ganpatiName',
-      label: 'Ganpati',
+      label: t('customer.ganpati'),
       render: (row) => (
         <Box display="flex" alignItems="center" gap={1}>
           {row.ganpatiImage && (
@@ -351,7 +317,7 @@ export default function CustomerManagement() {
               sx={{ width: 30, height: 30, borderRadius: 1 }}
             />
           )}
-          <Typography variant="body2">{row.ganpatiName || 'Not selected'}</Typography>
+          <Typography variant="body2">{row.ganpatiName || t('customer.not_selected')}</Typography>
         </Box>
       ),
     },
@@ -424,7 +390,7 @@ export default function CustomerManagement() {
             rowsPerPage={10}
             showSearch
             addButton={{
-              label: 'New Customer',
+              label: t('customer.add'),
               onClick: handleAddCustomer,
               color: 'primary',
               variant: 'contained',
@@ -448,7 +414,7 @@ export default function CustomerManagement() {
               if (!customer) return null;
               
               return (
-                <Tooltip title={customer.isPromoted ? 'Already Promoted' : 'Promote to Booking'}>
+                <Tooltip title={customer.isPromoted ? t('customer.already_promoted') : t('customer.promote_to_booking')}>
                   <IconButton
                     size="small"
                     onClick={() => handlePromoteClick(customer)}
@@ -500,7 +466,7 @@ export default function CustomerManagement() {
           <Box sx={{ position: 'relative', zIndex: 1 }}>
             <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               <PromoteIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Promote to Booking
+              {t('customer.promote_to_booking')}
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.85, display: 'block' }}>
               {selectedCustomer?.name} • {selectedCustomer?.phone}
@@ -519,7 +485,7 @@ export default function CustomerManagement() {
                   <Grid size={12}>
                     <DropdownField
                       name="ganpatiId"
-                      label="Select Ganpati"
+                      label={t('customer.select_ganpati')}
                       options={ganpatiOptions}
                       required
                       size="small"
@@ -534,7 +500,7 @@ export default function CustomerManagement() {
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <NumericField
                       name="totalPrice"
-                      label="Total Price"
+                      label={t('booking.total')}
                       required
                       min={0}
                       max={MAX_AMOUNT}
@@ -544,7 +510,7 @@ export default function CustomerManagement() {
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <NumericField
                       name="advancePayment"
-                      label="Advance Payment"
+                      label={t('booking.advance')}
                       required
                       min={0}
                       max={MAX_AMOUNT}
@@ -554,7 +520,7 @@ export default function CustomerManagement() {
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <NumericField
                       name="remainingPayment"
-                      label="Remaining Amount"
+                      label={t('booking.remaining')}
                       required
                       min={0}
                       max={MAX_AMOUNT}
@@ -565,7 +531,7 @@ export default function CustomerManagement() {
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <DateTimeField
                       name="bookingDate"
-                      label="Booking Date"
+                      label={t('booking.booking_date')}
                       viewMode="date"
                       size="small"
                       useCurrentDate
@@ -604,7 +570,7 @@ export default function CustomerManagement() {
               transition: 'all 0.3s ease',
             }}
           >
-            {submitting ? t('table.loading') : 'Promote'}
+            {submitting ? t('table.loading') : t('customer.promote')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -632,12 +598,12 @@ export default function CustomerManagement() {
           <Box display="flex" alignItems="center" gap={1.5}>
             <PersonIcon sx={{ fontSize: 28 }} />
             <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-              Customer Details
+              {t('customer.customer_details')}
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={1}>
             <Chip
-              label={viewCustomer?.isPromoted ? '✅ Booked' : '⏳ Pending'}
+              label={viewCustomer?.isPromoted ? `✅ ${t('customer.booked')}` : `⏳ ${t('customer.pending')}`}
               size="small"
               sx={{ 
                 bgcolor: viewCustomer?.isPromoted ? '#e8f5e9' : '#fff3e0',
@@ -665,14 +631,14 @@ export default function CustomerManagement() {
                     height: '100%'
                   }}>
                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon fontSize="small" /> Personal Information
+                      <PersonIcon fontSize="small" /> {t('customer.personal_info')}
                     </Typography>
-                    <ViewDetailRow label="Name" value={viewCustomer.name} icon={<PersonIcon sx={{ fontSize: 18 }} />} />
-                    <ViewDetailRow label="Phone" value={viewCustomer.phone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
-                    <ViewDetailRow label="Alternate Phone" value={viewCustomer.alternatePhone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
-                    <ViewDetailRow label="Type" value={viewCustomer.registrationType} />
+                    <ViewDetailRow label={t('customer.name')} value={viewCustomer.name} icon={<PersonIcon sx={{ fontSize: 18 }} />} />
+                    <ViewDetailRow label={t('customer.phone')} value={viewCustomer.phone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
+                    <ViewDetailRow label={t('customer.alternate_phone')} value={viewCustomer.alternatePhone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
+                    <ViewDetailRow label={t('customer.type')} value={viewCustomer.registrationType} />
                     {viewCustomer.mandalName && viewCustomer.mandalName !== 'N/A' && (
-                      <ViewDetailRow label="Mandal" value={viewCustomer.mandalName} />
+                      <ViewDetailRow label={t('customer.mandal_name')} value={viewCustomer.mandalName} />
                     )}
                   </Paper>
                 </Grid>
@@ -686,13 +652,13 @@ export default function CustomerManagement() {
                     height: '100%'
                   }}>
                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationOnIcon fontSize="small" /> Address Details
+                      <LocationOnIcon fontSize="small" /> {t('customer.address_details')}
                     </Typography>
-                    <ViewDetailRow label="Address" value={viewCustomer.address} icon={<LocationOnIcon sx={{ fontSize: 18 }} />} />
-                    <ViewDetailRow label="City" value={viewCustomer.city} />
-                    <ViewDetailRow label="Taluka" value={viewCustomer.taluka} />
-                    <ViewDetailRow label="District" value={viewCustomer.district} />
-                    <ViewDetailRow label="State" value={viewCustomer.state} />
+                    <ViewDetailRow label={t('customer.address')} value={viewCustomer.address} icon={<LocationOnIcon sx={{ fontSize: 18 }} />} />
+                    <ViewDetailRow label={t('customer.city')} value={viewCustomer.city} />
+                    <ViewDetailRow label={t('customer.taluka')} value={viewCustomer.taluka} />
+                    <ViewDetailRow label={t('customer.district')} value={viewCustomer.district} />
+                    <ViewDetailRow label={t('customer.state')} value={viewCustomer.state} />
                   </Paper>
                 </Grid>
               </Grid>
@@ -707,7 +673,7 @@ export default function CustomerManagement() {
                   mb: 3
                 }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CategoryIcon fontSize="small" /> Ganpati Details
+                    <CategoryIcon fontSize="small" /> {t('customer.ganpati_details')}
                   </Typography>
                   {viewCustomer.ganpatiImage && (
                     <Box sx={{ mb: 2 }}>
@@ -717,9 +683,9 @@ export default function CustomerManagement() {
                       />
                     </Box>
                   )}
-                  <ViewDetailRow label="Ganpati" value={viewCustomer.ganpatiName} />
-                  <ViewDetailRow label="Status" value={viewCustomer.isPromoted ? 'Booked' : 'Pending'} />
-                  <ViewDetailRow label="Registered" value={viewCustomer.createdAt ? new Date(viewCustomer.createdAt).toLocaleDateString() : 'N/A'} />
+                  <ViewDetailRow label={t('customer.ganpati')} value={viewCustomer.ganpatiName} />
+                  <ViewDetailRow label={t('customer.status')} value={viewCustomer.isPromoted ? t('customer.booked') : t('customer.pending')} />
+                  <ViewDetailRow label={t('customer.registered_on')} value={viewCustomer.createdAt ? new Date(viewCustomer.createdAt).toLocaleDateString() : 'N/A'} />
                 </Paper>
               )}
 
@@ -733,7 +699,7 @@ export default function CustomerManagement() {
                   mb: 3
                 }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PersonIcon fontSize="small" /> Contact Persons
+                    <PersonIcon fontSize="small" /> {t('customer.contact_persons')}
                   </Typography>
                   {viewCustomer.contactPersons.map((person, idx) => (
                     <Box key={idx} sx={{ 
@@ -769,7 +735,7 @@ export default function CustomerManagement() {
                     px: 3
                   }}
                 >
-                  Edit Customer
+                  {t('customer.edit_customer')}
                 </Button>
                 {!viewCustomer.isPromoted && (
                   <Button
@@ -788,7 +754,7 @@ export default function CustomerManagement() {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    Promote to Booking
+                    {t('customer.promote_to_booking')}
                   </Button>
                 )}
                 <Button
@@ -802,7 +768,7 @@ export default function CustomerManagement() {
                   }}
                   sx={{ borderRadius: 3, px: 3 }}
                 >
-                  Delete Customer
+                  {t('customer.delete_customer')}
                 </Button>
               </Box>
             </Box>
@@ -811,7 +777,7 @@ export default function CustomerManagement() {
 
         <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6' }}>
           <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>
-            Close
+            {t('button.close')}
           </Button>
         </DialogActions>
       </Dialog>
