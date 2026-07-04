@@ -307,8 +307,8 @@ export default function DashboardLayout() {
           </Toolbar>
         </StyledAppBar>
 
-        <Box sx={{ flex: 1, p: { xs: 1.5, sm: 3,md:1 }, overflow: "auto" }}>
-          <AnimatePresence mode="wait">
+        <Box sx={{ flex: 1, p: { xs: 1.5, sm: 3, md: 1 }, overflow: "auto" }}>
+          <AnimatePresence>
             <motion.div key={location.pathname}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

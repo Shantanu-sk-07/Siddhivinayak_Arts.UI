@@ -1,4 +1,3 @@
-// src/container/admin/BookingManagement.tsx
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
@@ -891,7 +890,6 @@ export default function BookingManagement() {
             />
           </GlassPaper>
 
-          {/* Add/Edit Dialog */}
           <Dialog
             open={dialogOpen}
             onClose={() => !submitting && setDialogOpen(false)}
@@ -1258,7 +1256,6 @@ export default function BookingManagement() {
             </DialogActions>
           </Dialog>
 
-          {/* View Dialog - Keep the same as before with translations */}
           <Dialog
             open={viewDialogOpen}
             onClose={() => setViewDialogOpen(false)}
@@ -1511,6 +1508,67 @@ export default function BookingManagement() {
                     >
                       {t('booking.send_receipt')}
                     </Button>
+
+                    <Button
+                      variant="contained"
+                      startIcon={<ReceiptIcon />}
+                      onClick={async () => {
+                        const booking = bookings.find((b) => b.id === viewBooking.id);
+                        if (booking) {
+                          try {
+                            const response = await adminService.generateReceipt(booking.id);
+                            if (response.success && response.data) {
+                              showSnackbar('success', `Receipt generated! Link: ${response.data.receiptUrl}`);
+                              navigator.clipboard.writeText(response.data.receiptUrl);
+                            } else {
+                              showSnackbar('error', response.message || 'Failed to generate receipt');
+                            }
+                          } catch  {
+                            showSnackbar('error', 'Failed to generate receipt');
+                          }
+                        }
+                      }}
+                      sx={{ 
+                        bgcolor: '#1976d2',
+                        '&:hover': { bgcolor: '#1565c0' },
+                        borderRadius: 3,
+                        px: 3
+                      }}
+                    >
+                      Generate & Copy Link
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      startIcon={<ReceiptIcon />}
+                      onClick={async () => {
+                        const booking = bookings.find((b) => b.id === viewBooking.id);
+                        if (booking) {
+                          try {
+                            const response = await adminService.generateReceipt(booking.id);
+                            if (response.success && response.data) {
+                              const message = `Namaste 🙏\n\nYour booking has been confirmed.\n\nYou can view and download your receipt using the link below.\n${response.data.receiptUrl}`;
+                              const encoded = encodeURIComponent(message);
+                              window.open(`https://wa.me/?text=${encoded}`, '_blank');
+                              showSnackbar('success', 'Receipt link sent via WhatsApp');
+                            } else {
+                              showSnackbar('error', response.message || 'Failed to generate receipt');
+                            }
+                          } catch {
+                            showSnackbar('error', 'Failed to generate receipt');
+                          }
+                        }
+                      }}
+                      sx={{ 
+                        bgcolor: '#25D366',
+                        '&:hover': { bgcolor: '#128C7E' },
+                        borderRadius: 3,
+                        px: 3
+                      }}
+                    >
+                      Generate & Send WhatsApp
+                    </Button>
+
                     <Button
                       variant="contained"
                       startIcon={<DownloadIcon />}

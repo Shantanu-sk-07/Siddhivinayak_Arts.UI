@@ -1,4 +1,4 @@
-// src/services/AdminService.ts
+import { getToken } from '@/helpers/auth';
 import { apiClient, apiFormData } from './api';
 import { 
   GanpatiResponseDto, 
@@ -193,5 +193,90 @@ export const adminService = {
     return apiClient<ApiResponse<string>>(`/admin/bookings/${id}/send-receipt`, {
       method: 'POST',
     });
-  }
+  },
+
+  async createShareCollection(data: { customerIds: string[], ganpatiIds: string[], expiryDays?: number }): Promise<ApiResponse<{
+  id: string;
+  token: string;
+  shareUrl: string;
+  createdBy: string;
+  createdDate: string;
+  expiryDate: string | null;
+  isActive: boolean;
+  ganpatiIds: string[];
+  customerIds: string[];
+}>> {
+  const adminId = localStorage.getItem('userId') || '';
+  return apiClient<ApiResponse<{
+    id: string;
+    token: string;
+    shareUrl: string;
+    createdBy: string;
+    createdDate: string;
+    expiryDate: string | null;
+    isActive: boolean;
+    ganpatiIds: string[];
+    customerIds: string[];
+  }>>(`/share/collection?adminId=${adminId}`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+},
+  async generateReceipt(bookingId: string): Promise<ApiResponse<{
+    id: string;
+    token: string;
+    receiptUrl: string;
+    bookingId: string;
+    pdfPath: string;
+    createdDate: string;
+    isActive: boolean;
+  }>> {
+    return apiClient<ApiResponse<{
+      id: string;
+      token: string;
+      receiptUrl: string;
+      bookingId: string;
+      pdfPath: string;
+      createdDate: string;
+      isActive: boolean;
+    }>>(`/admin/bookings/${bookingId}/generate-receipt`, {
+      method: 'POST',
+    });
+  },
+
+  async sendReceiptsBatch(bookingIds: string[]): Promise<ApiResponse<Array<{
+    bookingId: string;
+    status: 'sent' | 'failed';
+    message: string;
+    phoneNumbers?: string[];
+    receiptNumber?: string;
+  }>>> {
+    return apiClient<ApiResponse<Array<{
+      bookingId: string;
+      status: 'sent' | 'failed';
+      message: string;
+      phoneNumbers?: string[];
+      receiptNumber?: string;
+    }>>>('/admin/bookings/send-receipts-batch', {
+      method: 'POST',
+      body: JSON.stringify(bookingIds),
+    });
+  },
+
+  async downloadReceiptPDF(id: string): Promise<Blob> {
+    const token = getToken();
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+    
+    const response = await fetch(`${API_BASE_URL}/admin/bookings/${id}/download-pdf`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to download PDF');
+    }
+    return response.blob();
+  },
 };

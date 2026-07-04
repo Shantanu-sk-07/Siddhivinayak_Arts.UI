@@ -1,4 +1,3 @@
-// src/services/api.ts
 import { getToken, clearToken, getApiBaseUrl } from '@/helpers/auth';
 
 interface ApiOptions extends RequestInit {
@@ -35,17 +34,13 @@ export const apiClient = async <T = unknown>(
       headers,
     });
 
+    // Only clear token on 401 (Unauthorized), not on 403 (Forbidden)
     if (response.status === 401) {
       clearToken();
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
       throw new Error('Session expired. Please login again.');
-    }
-
-    if (response.status === 403) {
-      const data = await response.json();
-      throw new Error(data.message || 'Access denied. You do not have permission.');
     }
 
     const data = await response.json();
@@ -90,11 +85,6 @@ export const apiFormData = async <T = unknown>(
         window.location.href = '/login';
       }
       throw new Error('Session expired. Please login again.');
-    }
-
-    if (response.status === 403) {
-      const data = await response.json();
-      throw new Error(data.message || 'Access denied. You do not have permission.');
     }
 
     const data = await response.json();

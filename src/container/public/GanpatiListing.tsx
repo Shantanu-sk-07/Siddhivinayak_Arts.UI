@@ -1,4 +1,3 @@
-// src/container/public/GanpatiListing.tsx
 import { useState, useEffect, useCallback } from 'react';
 import {
   Grid, Card, Typography, Button, Box, LinearProgress,
@@ -355,7 +354,7 @@ export default function GanpatiListing() {
                             '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' }
                           }}
                         >
-                          <AnimatePresence mode="wait">
+                          <AnimatePresence>
                             {ganpati.likedBy?.includes('user_id') ? (
                               <motion.div
                                 key="liked"
@@ -463,7 +462,6 @@ export default function GanpatiListing() {
         )}
       </Container>
 
-      {/* Full Screen Image Dialog */}
       <FullScreenImageDialog
         open={fullImageOpen}
         onClose={handleCloseFullImage}

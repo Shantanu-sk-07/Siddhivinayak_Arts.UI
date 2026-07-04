@@ -11,6 +11,8 @@ import GanpatiDetails from '@/container/public/GanpatiDetails';
 import AboutPage from '@/container/public/AboutPage';
 import ContactPage from '@/container/public/ContactPage';
 import Login from '@/container/public/Login';
+import GanpatiShareView from '@/container/public/GanpatiShareView';
+import ReceiptView from '@/container/public/ReceiptView';
 
 import AdminDashboard from '@/container/admin/AdminDashboard';
 import GanpatiManagement from '@/container/admin/GanpatiManagement';
@@ -29,6 +31,8 @@ const AppRoutes = () => {
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="login" element={<Login />} />
+        <Route path="view/:token" element={<GanpatiShareView />} />
+        <Route path="receipt/:token" element={<ReceiptView />} />
       </Route>
 
       <Route

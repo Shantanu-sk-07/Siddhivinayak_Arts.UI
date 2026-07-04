@@ -1,4 +1,3 @@
-// src/container/public/EnquiryForm.tsx
 import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box, Typography, Grid, Button, Dialog, DialogTitle,
@@ -158,7 +157,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     }
   });
 
-  const { watch, reset, handleSubmit, setValue } = methods;
+  const { watch, reset, handleSubmit, setValue, setError } = methods;
   const selectedDistrict = watch('district');
   const talukaOptions = useMemo(() => getTalukaOptions(selectedDistrict), [selectedDistrict]);
 
@@ -267,7 +266,15 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           handleClose();
           if (onSuccess) onSuccess();
         } else {
-          showSnackbar('error', response.message || t('msg.error'));
+          if (response.message?.toLowerCase().includes('phone') || response.message?.toLowerCase().includes('already exists')) {
+            setError('phone', { 
+              type: 'manual', 
+              message: t('validation.phone_exists', 'Mobile number already exists') 
+            });
+            showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+          } else {
+            showSnackbar('error', response.message || t('msg.error'));
+          }
         }
       } else if (isCustomerMode) {
         const payload = {
@@ -288,12 +295,29 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           handleClose();
           if (onSuccess) onSuccess();
         } else {
-          showSnackbar('error', response.message || t('msg.error'));
+          if (response.message?.toLowerCase().includes('phone') || response.message?.toLowerCase().includes('already exists')) {
+            setError('phone', { 
+              type: 'manual', 
+              message: t('validation.phone_exists', 'Mobile number already exists') 
+            });
+            showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+          } else {
+            showSnackbar('error', response.message || t('msg.error'));
+          }
         }
       }
     } catch (error) {
       console.error('Form submission error:', error);
-      showSnackbar('error', t('msg.error'));
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.toLowerCase().includes('phone') || msg.toLowerCase().includes('already exists')) {
+        setError('phone', { 
+          type: 'manual', 
+          message: t('validation.phone_exists', 'Mobile number already exists') 
+        });
+        showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+      } else {
+        showSnackbar('error', t('msg.error'));
+      }
     } finally {
       setSubmitting(false);
     }

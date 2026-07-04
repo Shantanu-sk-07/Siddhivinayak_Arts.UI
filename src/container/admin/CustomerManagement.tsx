@@ -1,16 +1,18 @@
-// src/container/admin/CustomerManagement.tsx
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, useTheme, alpha, styled,
   Chip, Dialog, DialogTitle, DialogContent, DialogActions,
-  Grid, IconButton, Tooltip, Avatar, LinearProgress, Tabs, Tab
+  Grid, IconButton, Tooltip, Avatar, LinearProgress, Tabs, Tab,
+  FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText,
+  TextField
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
   ArrowUpward as PromoteIcon, 
   Edit as EditIcon, Delete as DeleteIcon,
   Person as PersonIcon, Phone as PhoneIcon, 
-  LocationOn as LocationOnIcon, Category as CategoryIcon
+  LocationOn as LocationOnIcon, Category as CategoryIcon,
+  Share as ShareIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -74,6 +76,11 @@ export default function CustomerManagement() {
   const [selectedCustomer, setSelectedCustomer] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [customerTabValue, setCustomerTabValue] = useState<number>(0);
+
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareGanpatiIds, setShareGanpatiIds] = useState<string[]>([]);
+  const [expiryDays, setExpiryDays] = useState<number>(7);
 
   const methods = useForm<PromoteFormData>({
     defaultValues: {
@@ -358,6 +365,19 @@ export default function CustomerManagement() {
           >
             {t('admin.customers')}
           </Typography>
+          <Button
+            variant="contained"
+            startIcon={<ShareIcon />}
+            disabled={selectedCustomerIds.length === 0}
+            onClick={() => setShareDialogOpen(true)}
+            sx={{ 
+              bgcolor: '#25D366',
+              '&:hover': { bgcolor: '#128C7E' },
+              borderRadius: 3
+            }}
+          >
+            Send Ganpati ({selectedCustomerIds.length})
+          </Button>
         </Box>
 
         <GlassPaper>
@@ -389,6 +409,10 @@ export default function CustomerManagement() {
             loading={loading}
             rowsPerPage={10}
             showSearch
+            enableCheckbox={true}
+            onSelectionChange={(rows) => {
+              setSelectedCustomerIds(rows.map(r => r.id as string));
+            }}
             addButton={{
               label: t('customer.add'),
               onClick: handleAddCustomer,
@@ -415,17 +439,19 @@ export default function CustomerManagement() {
               
               return (
                 <Tooltip title={customer.isPromoted ? t('customer.already_promoted') : t('customer.promote_to_booking')}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handlePromoteClick(customer)}
-                    disabled={customer.isPromoted || submitting}
-                    sx={{ 
-                      color: customer.isPromoted ? '#aaa' : '#4caf50',
-                      '&:hover': { color: '#388e3c' }
-                    }}
-                  >
-                    <PromoteIcon />
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={() => handlePromoteClick(customer)}
+                      disabled={customer.isPromoted || submitting}
+                      sx={{ 
+                        color: customer.isPromoted ? '#aaa' : '#4caf50',
+                        '&:hover': { color: '#388e3c' }
+                      }}
+                    >
+                      <PromoteIcon />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               );
             }}
@@ -778,6 +804,149 @@ export default function CustomerManagement() {
         <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6' }}>
           <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>
             {t('button.close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: '#25D366', color: 'white' }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <ShareIcon />
+            <Typography variant="h6">Send Ganpati Collection</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Selected Customers: {selectedCustomerIds.length}
+          </Typography>
+          
+          {/* Optional: Show phone numbers of selected customers */}
+          <Box sx={{ mt: 1, mb: 2 }}>
+            <Typography variant="caption" color="textSecondary" display="block">
+              Phone numbers: 
+              {selectedCustomerIds.map(id => {
+                const customer = customers.find(c => c.id === id);
+                return customer?.phone;
+              }).filter(Boolean).join(', ') || 'None'}
+            </Typography>
+          </Box>
+
+          <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom>
+            Select Ganpati to Share:
+          </Typography>
+          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+            <InputLabel>Ganpati</InputLabel>
+            <Select
+              multiple
+              value={shareGanpatiIds}
+              onChange={(e) => setShareGanpatiIds(e.target.value as string[])}
+              label="Ganpati"
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => {
+                    const g = ganpatiList.find((item) => item.id === value);
+                    return <Chip key={value} label={g?.name || value} size="small" />;
+                  })}
+                </Box>
+              )}
+            >
+              {ganpatiList.map((g) => (
+                <MenuItem key={g.id} value={g.id}>
+                  <Checkbox checked={shareGanpatiIds.indexOf(g.id) > -1} />
+                  <ListItemText primary={`${g.name} (${g.height}) - ₹${g.price.toLocaleString()}`} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            size="small"
+            label="Expiry Days (Optional)"
+            type="number"
+            value={expiryDays}
+            onChange={(e) => setExpiryDays(parseInt(e.target.value) || 0)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              try {
+                const response = await adminService.createShareCollection({
+                  customerIds: selectedCustomerIds,
+                  ganpatiIds: shareGanpatiIds,
+                  expiryDays: expiryDays > 0 ? expiryDays : undefined,
+                });
+                if (response.success) {
+                  showSnackbar('success', `Share link created: ${response.data.shareUrl}`);
+                  navigator.clipboard.writeText(response.data.shareUrl);
+                  setShareDialogOpen(false);
+                  setSelectedCustomerIds([]);
+                  setShareGanpatiIds([]);
+                } else {
+                  showSnackbar('error', response.message || 'Failed to create share link');
+                }
+              } catch {
+                showSnackbar('error', 'Failed to create share link');
+              }
+            }}
+            disabled={shareGanpatiIds.length === 0}
+            sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+          >
+            Generate & Copy Link
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              try {
+                const response = await adminService.createShareCollection({
+                  customerIds: selectedCustomerIds,
+                  ganpatiIds: shareGanpatiIds,
+                  expiryDays: expiryDays > 0 ? expiryDays : undefined,
+                });
+                if (response.success) {
+                  let shareUrl = response.data.shareUrl;
+                  if (!shareUrl.startsWith('http://') && !shareUrl.startsWith('https://')) {
+                    shareUrl = `https://${shareUrl}`;
+                  }
+                  
+                  const selectedCustomers = customers.filter(c => selectedCustomerIds.includes(c.id));
+                  const phoneNumbers = selectedCustomers.map(c => c.phone).filter(p => p && p.length > 0);
+                  
+                  if (phoneNumbers.length === 0) {
+                    showSnackbar('warning', 'No phone numbers found for selected customers');
+                    return;
+                  }
+
+                  const message = `Namaste 🙏\n\nYour selected Ganpati collection is ready.\n\nClick below to view.\n${shareUrl}`;
+                  const encoded = encodeURIComponent(message);
+
+                  phoneNumbers.forEach(phone => {
+                    window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+                  });
+
+                  showSnackbar('success', `WhatsApp links opened for ${phoneNumbers.length} customers`);
+                  setShareDialogOpen(false);
+                  setSelectedCustomerIds([]);
+                  setShareGanpatiIds([]);
+                } else {
+                  showSnackbar('error', response.message || 'Failed to create share link');
+                }
+              } catch {
+                showSnackbar('error', 'Failed to create share link');
+              }
+            }}
+            disabled={shareGanpatiIds.length === 0}
+            sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#128C7E' } }}
+          >
+            Generate & Send WhatsApp
           </Button>
         </DialogActions>
       </Dialog>
