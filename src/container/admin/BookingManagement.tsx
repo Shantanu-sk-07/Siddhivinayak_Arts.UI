@@ -6,12 +6,10 @@ import {
   MenuItem, Select, FormControl, InputLabel, Avatar
 } from '@mui/material';
 import {
-  Close as CloseIcon,
-  Send as SendIcon, Download as DownloadIcon, Save as SaveIcon,
-  Receipt as ReceiptIcon, Payment as PaymentIcon,
+  Close as CloseIcon, Send as SendIcon, Download as DownloadIcon,
+  Save as SaveIcon, Receipt as ReceiptIcon, Payment as PaymentIcon,
   AttachMoney as MoneyIcon, History as HistoryIcon, Edit as EditIcon,
-  Person as PersonIcon,
-  Phone as PhoneIcon, LocationOn as LocationOnIcon,
+  Person as PersonIcon, Phone as PhoneIcon, LocationOn as LocationOnIcon,
   Category as CategoryIcon, CalendarToday as CalendarTodayIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
@@ -23,15 +21,10 @@ import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastM
 import { adminService } from '@/services/AdminService';
 import { ganpatiService } from '@/services/GanpatiService';
 import {
-  GanpatiResponseDto,
-  ConfirmedBooking,
-  ConfirmedBookingRequest,
-  BookingFormData,
-  BookingRecord,
-  ViewBookingData,
-  InstallmentData
+  GanpatiResponseDto, ConfirmedBooking, ConfirmedBookingRequest,
+  BookingFormData, BookingRecord, ViewBookingData, InstallmentData
 } from '@/types/MurtiType';
-import { downloadReceiptPDF, generateReceiptMessage } from '@/utils/ReceiptGenerator';
+import { downloadReceiptPDF } from '@/utils/ReceiptGenerator';
 import { sendWhatsAppMessages } from '@/utils/Whatsapp';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -39,6 +32,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
 const MAX_AMOUNT = 10000000;
+
+type GanpatiRow = { name: string; images?: string[] };
+type CustomerRow = { name: string; registrationType?: string };
 
 const GlassPaper = styled(Paper)(({ theme }) => ({
   background: alpha(theme.palette.common.white, 0.92),
@@ -55,28 +51,14 @@ const StatCard = styled(Card)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
   padding: theme.spacing(2),
   transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: `0 8px 25px ${alpha(theme.palette.common.black, 0.1)}`
-  },
+  '&:hover': { transform: 'translateY(-4px)', boxShadow: `0 8px 25px ${alpha(theme.palette.common.black, 0.1)}` },
 }));
 
 const ViewDetailRow = ({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) => (
-  <Box sx={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1.5,
-    py: 1,
-    borderBottom: '1px solid #f0f0f0',
-    '&:last-child': { borderBottom: 'none' }
-  }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, borderBottom: '1px solid #f0f0f0', '&:last-child': { borderBottom: 'none' } }}>
     {icon && <Box sx={{ color: '#E65100', display: 'flex', alignItems: 'center' }}>{icon}</Box>}
-    <Typography variant="body2" sx={{ color: '#666', minWidth: 120, fontWeight: 500 }}>
-      {label}:
-    </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1a1a1a', wordBreak: 'break-word' }}>
-      {value || 'N/A'}
-    </Typography>
+    <Typography variant="body2" sx={{ color: '#666', minWidth: 120, fontWeight: 500 }}>{label}:</Typography>
+    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1a1a1a', wordBreak: 'break-word' }}>{value || 'N/A'}</Typography>
   </Box>
 );
 
@@ -88,19 +70,7 @@ const StatusChip = ({ status }: { status: string }) => {
     CANCELLED: { label: t('booking.cancelled'), color: '#d32f2f', bg: '#ffebee' },
   };
   const c = config[status] || { label: status, color: '#666', bg: '#f5f5f5' };
-  return (
-    <Chip
-      label={c.label}
-      size="small"
-      sx={{
-        bgcolor: c.bg,
-        color: c.color,
-        fontWeight: 600,
-        height: 28,
-        '& .MuiChip-label': { fontSize: '0.75rem', px: 1.5 }
-      }}
-    />
-  );
+  return <Chip label={c.label} size="small" sx={{ bgcolor: c.bg, color: c.color, fontWeight: 600, height: 28, '& .MuiChip-label': { fontSize: '0.75rem', px: 1.5 } }} />;
 };
 
 export default function BookingManagement() {
@@ -121,75 +91,43 @@ export default function BookingManagement() {
 
   const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
-      customerId: '',
-      customerName: '',
-      customerPhone: '',
-      customerAddress: '',
-      customerTaluka: '',
-      customerDistrict: '',
-      mandalName: '',
-      ganpatiId: '',
-      advancePayment: 0,
-      remainingPayment: 0,
-      totalPrice: 0,
-      bookingDate: dayjs().format('YYYY-MM-DD'),
-      notes: '',
-      status: 'PENDING',
-      registrationType: 'HOME',
-      contactPerson1Name: '',
-      contactPerson1Phone: '',
-      contactPerson1Designation: '',
-      contactPerson2Name: '',
-      contactPerson2Phone: '',
-      contactPerson2Designation: '',
+      customerId: '', customerName: '', customerPhone: '', customerAddress: '', customerTaluka: '', customerDistrict: '',
+      mandalName: '', ganpatiId: '', advancePayment: 0, remainingPayment: 0, totalPrice: 0,
+      bookingDate: dayjs().format('YYYY-MM-DD'), notes: '', status: 'PENDING', registrationType: 'HOME',
+      contactPerson1Name: '', contactPerson1Phone: '', contactPerson1Designation: '',
+      contactPerson2Name: '', contactPerson2Phone: '', contactPerson2Designation: '',
     },
   });
 
   const watchTotalPrice = watch('totalPrice') || 0;
   const watchAdvancePayment = watch('advancePayment') || 0;
-
   useEffect(() => {
     const remaining = Math.max(0, watchTotalPrice - watchAdvancePayment);
     setValue('remainingPayment', remaining);
   }, [watchTotalPrice, watchAdvancePayment, setValue]);
 
-  const fetchBookings = useCallback(async (): Promise<void> => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       const response = await adminService.getAllBookings();
-      if (response.success && response.data) {
-        setBookings(response.data);
-      } else {
-        showSnackbar('error', response.message || t('msg.error'));
-      }
-    } catch {
-      showSnackbar('error', t('msg.error'));
-    } finally {
-      setLoading(false);
-    }
+      if (response.success && response.data) setBookings(response.data);
+      else showSnackbar('error', response.message || t('msg.error'));
+    } catch { showSnackbar('error', t('msg.error')); } finally { setLoading(false); }
   }, [t]);
 
-  const fetchGanpatiList = useCallback(async (): Promise<void> => {
+  const fetchGanpatiList = useCallback(async () => {
     try {
       const response = await ganpatiService.getAll();
-      if (response.success && response.data) {
-        setGanpatiList(response.data);
-      }
-    } catch {
-      console.error('Failed to fetch ganpati');
-    }
+      if (response.success && response.data) setGanpatiList(response.data);
+    } catch { console.error('Failed to fetch ganpati'); }
   }, []);
 
-  useEffect(() => {
-    fetchBookings();
-    fetchGanpatiList();
-  }, [fetchBookings, fetchGanpatiList]);
+  useEffect(() => { fetchBookings(); fetchGanpatiList(); }, [fetchBookings, fetchGanpatiList]);
 
   useEffect(() => {
     if (editingBooking && dialogOpen) {
       const remaining = editingBooking.remainingPayment || 0;
       const history = editingBooking.paymentHistory || [];
-
       setPaymentHistory(history.map((p) => ({
         amount: p.amount || 0,
         date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
@@ -197,7 +135,6 @@ export default function BookingManagement() {
         notes: p.notes || '',
         remainingAfter: p.remainingAfterPayment || 0
       })));
-
       setInstallments([{
         id: 1,
         remainingAmount: remaining,
@@ -209,12 +146,11 @@ export default function BookingManagement() {
     }
   }, [editingBooking, dialogOpen]);
 
-  const handleEdit = (booking: ConfirmedBooking): void => {
+  const handleEdit = (booking: ConfirmedBooking) => {
     setEditingBooking(booking);
     const customer = booking.customer;
     const contacts = booking.additionalContacts || [];
     const history = booking.paymentHistory || [];
-
     setPaymentHistory(history.map((p) => ({
       amount: p.amount || 0,
       date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
@@ -222,9 +158,8 @@ export default function BookingManagement() {
       notes: p.notes || '',
       remainingAfter: p.remainingAfterPayment || 0
     })));
-
     if (history.length > 0) {
-      const installmentsList: InstallmentData[] = history.map((p, index) => ({
+      const installmentsList = history.map((p, index) => ({
         id: index + 1,
         remainingAmount: p.remainingAfterPayment || 0,
         paidAmount: p.amount || 0,
@@ -243,7 +178,6 @@ export default function BookingManagement() {
         isFinal: booking.remainingPayment === 0
       }]);
     }
-
     reset({
       customerId: customer?.id || '',
       customerName: booking.customerName || customer?.name || '',
@@ -270,19 +204,13 @@ export default function BookingManagement() {
     setDialogOpen(true);
   };
 
-  const handleView = (booking: ConfirmedBooking): void => {
+  const handleView = (booking: ConfirmedBooking) => {
     const customer = booking.customer;
     const allContacts = [
       ...(booking.additionalContacts || []),
-      ...(customer?.contactPersons?.map((cp) => ({
-        name: cp.name,
-        phone: cp.phone,
-        designation: cp.designation
-      })) || [])
+      ...(customer?.contactPersons?.map((cp) => ({ name: cp.name, phone: cp.phone, designation: cp.designation })) || [])
     ];
-
     const history = booking.paymentHistory || [];
-
     const viewData: ViewBookingData = {
       id: booking.id,
       receiptNumber: booking.receiptNumber || 'N/A',
@@ -318,48 +246,46 @@ export default function BookingManagement() {
     setViewDialogOpen(true);
   };
 
-  const handleDelete = async (booking: ConfirmedBooking): Promise<void> => {
+  const handleDelete = async (booking: ConfirmedBooking) => {
     const confirmed = await showConfirmation(t('msg.delete_confirm'), t('common.confirm_action'));
     if (confirmed) {
       const response = await adminService.deleteBooking(booking.id);
-      if (response.success) {
-        showSnackbar('success', t('msg.delete_success'));
-        await fetchBookings();
-      } else {
-        showSnackbar('error', response.message || t('msg.error'));
+      if (response.success) { showSnackbar('success', t('msg.delete_success')); await fetchBookings(); }
+      else showSnackbar('error', response.message || t('msg.error'));
+    }
+  };
+
+  const sendReceiptLink = async (booking: ConfirmedBooking) => {
+    const customer = booking.customer;
+    const contactNumbers: string[] = [];
+    if (customer?.phone) contactNumbers.push(customer.phone);
+    else if (booking.customerPhone) contactNumbers.push(booking.customerPhone);
+    if (booking.additionalContacts) booking.additionalContacts.forEach((c) => { if (c.phone) contactNumbers.push(c.phone); });
+    if (customer?.contactPersons) customer.contactPersons.forEach((c) => { if (c.phone) contactNumbers.push(c.phone); });
+    if (contactNumbers.length === 0) { showSnackbar('warning', t('booking.no_phone_number')); return false; }
+
+    try {
+      const response = await adminService.generateReceipt(booking.id);
+      if (!response.success || !response.data) {
+        showSnackbar('error', response.message || 'Failed to generate receipt');
+        return false;
       }
+      const receiptUrl = response.data.receiptUrl;
+      const message = `Namaste 🙏\n\nYour booking receipt is ready.\n\nClick below to view/download.\n${receiptUrl}`;
+      sendWhatsAppMessages(contactNumbers, message);
+      showSnackbar('success', `Receipt link sent to ${contactNumbers.length} number(s)`);
+      return true;
+    } catch (error) {
+      console.error('Error sending receipt:', error);
+      showSnackbar('error', 'Failed to generate or send receipt');
+      return false;
     }
   };
 
-  const handleSendReceipt = async (booking: ConfirmedBooking): Promise<void> => {
-    if (!booking.customer && !booking.customerPhone) {
-      showSnackbar('warning', t('booking.no_phone_number'));
-      return;
-    }
+  const handleSendReceipt = (booking: ConfirmedBooking) => sendReceiptLink(booking);
 
+  const handleDownloadReceipt = (booking: ConfirmedBooking) => {
     const customer = booking.customer;
-    const contactNumbers: string[] = [];
-
-    if (customer?.phone) contactNumbers.push(customer.phone);
-    else if (booking.customerPhone) contactNumbers.push(booking.customerPhone);
-
-    if (booking.additionalContacts) {
-      booking.additionalContacts.forEach((c) => {
-        if (c.phone) contactNumbers.push(c.phone);
-      });
-    }
-
-    if (customer?.contactPersons) {
-      customer.contactPersons.forEach((c) => {
-        if (c.phone) contactNumbers.push(c.phone);
-      });
-    }
-
-    if (contactNumbers.length === 0) {
-      showSnackbar('warning', t('booking.no_phone_number'));
-      return;
-    }
-
     const history = booking.paymentHistory || [];
     const receiptData = {
       receiptNumber: booking.receiptNumber || 'REC-0001',
@@ -379,61 +305,7 @@ export default function BookingManagement() {
       totalPaidSoFar: booking.totalPaidSoFar || 0,
       bookingDate: booking.bookingDate || dayjs().format('YYYY-MM-DD'),
       status: booking.status,
-      contactNumbers: contactNumbers.length > 0 ? contactNumbers : [''],
-      paymentHistory: history.map((p) => ({
-        amount: p.amount || 0,
-        date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
-        type: p.paymentType || 'INSTALLMENT',
-        notes: p.notes || '',
-        remainingAfter: p.remainingAfterPayment || 0
-      }))
-    };
-
-    await downloadReceiptPDF(receiptData);
-    const message = generateReceiptMessage(receiptData);
-    sendWhatsAppMessages(contactNumbers, message);
-    showSnackbar('success', t('booking.receipt_sent'));
-  };
-
-  const handleDownloadReceipt = (booking: ConfirmedBooking): void => {
-    const customer = booking.customer;
-    const contactNumbers: string[] = [];
-
-    if (customer?.phone) contactNumbers.push(customer.phone);
-    else if (booking.customerPhone) contactNumbers.push(booking.customerPhone);
-
-    if (booking.additionalContacts) {
-      booking.additionalContacts.forEach((c) => {
-        if (c.phone) contactNumbers.push(c.phone);
-      });
-    }
-
-    if (customer?.contactPersons) {
-      customer.contactPersons.forEach((c) => {
-        if (c.phone) contactNumbers.push(c.phone);
-      });
-    }
-
-    const history = booking.paymentHistory || [];
-    const receiptData = {
-      receiptNumber: booking.receiptNumber || 'REC-0001',
-      date: new Date(booking.createdAt).toLocaleDateString(),
-      customerName: booking.customerName || customer?.name || '',
-      customerPhone: booking.customerPhone || customer?.phone || '',
-      customerAddress: booking.customerAddress || customer?.address || '',
-      customerTaluka: booking.customerTaluka || customer?.taluka || '',
-      customerDistrict: booking.customerDistrict || customer?.district || '',
-      mandalName: booking.mandalName || customer?.mandalName || '',
-      ganpatiName: booking.ganpati?.name || '',
-      ganpatiHeight: booking.ganpati?.height || '',
-      ganpatiPrice: booking.ganpati?.price || 0,
-      advancePayment: booking.advancePayment,
-      remainingPayment: booking.remainingPayment,
-      totalPrice: booking.totalPrice,
-      totalPaidSoFar: booking.totalPaidSoFar || 0,
-      bookingDate: booking.bookingDate || dayjs().format('YYYY-MM-DD'),
-      status: booking.status,
-      contactNumbers: contactNumbers.length > 0 ? contactNumbers : [''],
+      contactNumbers: [],
       paymentHistory: history.map((p) => ({
         amount: p.amount || 0,
         date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
@@ -447,13 +319,13 @@ export default function BookingManagement() {
   };
 
   const handleAddInstallment = () => {
-    const lastInstallment = installments[installments.length - 1];
-    if (lastInstallment && lastInstallment.newRemaining > 0) {
+    const last = installments[installments.length - 1];
+    if (last && last.newRemaining > 0) {
       setInstallments([...installments, {
         id: installments.length + 1,
-        remainingAmount: lastInstallment.newRemaining,
+        remainingAmount: last.newRemaining,
         paidAmount: 0,
-        newRemaining: lastInstallment.newRemaining,
+        newRemaining: last.newRemaining,
         date: dayjs().format('YYYY-MM-DD'),
         isFinal: false
       }]);
@@ -464,54 +336,27 @@ export default function BookingManagement() {
     const paidAmount = Math.max(0, parseFloat(value) || 0);
     setInstallments((prev) => prev.map((inst) => {
       if (inst.id === id) {
-        const maxPayable = inst.remainingAmount;
-        const actualPaid = Math.min(paidAmount, maxPayable);
+        const actualPaid = Math.min(paidAmount, inst.remainingAmount);
         const newRemaining = Math.max(0, inst.remainingAmount - actualPaid);
-        return {
-          ...inst,
-          paidAmount: actualPaid,
-          newRemaining: newRemaining,
-          isFinal: newRemaining === 0
-        };
+        return { ...inst, paidAmount: actualPaid, newRemaining, isFinal: newRemaining === 0 };
       }
       return inst;
     }));
   };
 
-  const onSubmit = async (data: BookingFormData, action: 'submit' | 'send' | 'download'): Promise<void> => {
-    if (Object.keys(errors).length > 0) {
-      showSnackbar('warning', t('validation.fix_errors'));
-      return;
-    }
-
-    setSubmitting(true);
-    setActionType(action);
-
+  const onSubmit = async (data: BookingFormData, action: 'submit' | 'send' | 'download') => {
+    if (Object.keys(errors).length > 0) { showSnackbar('warning', t('validation.fix_errors')); return; }
+    setSubmitting(true); setActionType(action);
     try {
       const additionalContacts: { name: string; phone: string; designation: string }[] = [];
-
       if (data.contactPerson1Name && data.contactPerson1Phone) {
-        additionalContacts.push({
-          name: data.contactPerson1Name,
-          phone: data.contactPerson1Phone,
-          designation: data.contactPerson1Designation || t('common.contact_person'),
-        });
+        additionalContacts.push({ name: data.contactPerson1Name, phone: data.contactPerson1Phone, designation: data.contactPerson1Designation || t('common.contact_person') });
       }
-
       if (data.contactPerson2Name && data.contactPerson2Phone) {
-        additionalContacts.push({
-          name: data.contactPerson2Name,
-          phone: data.contactPerson2Phone,
-          designation: data.contactPerson2Designation || t('common.contact_person'),
-        });
+        additionalContacts.push({ name: data.contactPerson2Name, phone: data.contactPerson2Phone, designation: data.contactPerson2Designation || t('common.contact_person') });
       }
-
       let totalPaid = data.advancePayment;
-      for (const inst of installments) {
-        if (inst.paidAmount > 0) {
-          totalPaid += inst.paidAmount;
-        }
-      }
+      for (const inst of installments) if (inst.paidAmount > 0) totalPaid += inst.paidAmount;
       const remaining = Math.max(0, data.totalPrice - totalPaid);
 
       const requestData: ConfirmedBookingRequest = {
@@ -551,65 +396,13 @@ export default function BookingManagement() {
         showSnackbar('success', editingBooking ? t('msg.update_success') : t('msg.save_success'));
         setDialogOpen(false);
         await fetchBookings();
-
         if (action === 'send' || action === 'download') {
           const booking = response.data;
           if (booking) {
-            const customer = booking.customer;
-            const contactNumbers: string[] = [];
-
-            if (customer?.phone) contactNumbers.push(customer.phone);
-            else if (booking.customerPhone) contactNumbers.push(booking.customerPhone);
-
-            if (booking.additionalContacts) {
-              booking.additionalContacts.forEach((c) => {
-                if (c.phone) contactNumbers.push(c.phone);
-              });
-            }
-
-            if (customer?.contactPersons) {
-              customer.contactPersons.forEach((c) => {
-                if (c.phone) contactNumbers.push(c.phone);
-              });
-            }
-
-            const history = booking.paymentHistory || [];
-            const receiptData = {
-              receiptNumber: booking.receiptNumber || 'REC-0001',
-              date: new Date(booking.createdAt).toLocaleDateString(),
-              customerName: booking.customerName || customer?.name || '',
-              customerPhone: booking.customerPhone || customer?.phone || '',
-              customerEmail: booking.customerEmail || '',
-              customerAddress: booking.customerAddress || customer?.address || '',
-              customerTaluka: booking.customerTaluka || customer?.taluka || '',
-              customerDistrict: booking.customerDistrict || customer?.district || '',
-              mandalName: booking.mandalName || customer?.mandalName || '',
-              ganpatiName: booking.ganpati?.name || '',
-              ganpatiHeight: booking.ganpati?.height || '',
-              ganpatiPrice: booking.ganpati?.price || 0,
-              advancePayment: booking.advancePayment,
-              remainingPayment: booking.remainingPayment,
-              totalPrice: booking.totalPrice,
-              totalPaidSoFar: booking.totalPaidSoFar || 0,
-              bookingDate: booking.bookingDate || dayjs().format('YYYY-MM-DD'),
-              status: booking.status,
-              contactNumbers: contactNumbers.length > 0 ? contactNumbers : [''],
-              paymentHistory: history.map((p) => ({
-                amount: p.amount || 0,
-                date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
-                type: p.paymentType || 'INSTALLMENT',
-                notes: p.notes || '',
-                remainingAfter: p.remainingAfterPayment || 0
-              }))
-            };
-
             if (action === 'send') {
-              const message = generateReceiptMessage(receiptData);
-              sendWhatsAppMessages(contactNumbers, message);
-              showSnackbar('success', t('booking.receipt_sent'));
+              await sendReceiptLink(booking);
             } else if (action === 'download') {
-              downloadReceiptPDF(receiptData);
-              showSnackbar('success', t('booking.receipt_downloaded'));
+              handleDownloadReceipt(booking);
             }
           }
         }
@@ -626,20 +419,17 @@ export default function BookingManagement() {
   };
 
   const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'default' => {
-    const statusMap: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
-      'COMPLETED': 'success',
-      'PENDING': 'warning',
-      'CANCELLED': 'error',
+    const map: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
+      COMPLETED: 'success', PENDING: 'warning', CANCELLED: 'error'
     };
-    return statusMap[status] || 'default';
+    return map[status] || 'default';
   };
 
   const getFilteredBookings = () => {
     if (tabValue === 0) return bookings;
     const type = tabValue === 1 ? 'MANDAL' : 'HOME';
     return bookings.filter((b) => {
-      const customer = b.customer;
-      const regType = customer?.registrationType;
+      const regType = b.customer?.registrationType;
       return regType === type;
     });
   };
@@ -649,15 +439,10 @@ export default function BookingManagement() {
       key: 'ganpati',
       label: t('booking.ganpati'),
       render: (row) => {
-        const ganpati = row.ganpati as { name: string; images?: string[] };
+        const ganpati = row.ganpati as GanpatiRow;
         return (
           <Box display="flex" alignItems="center" gap={1}>
-            {ganpati?.images?.[0] && (
-              <Avatar
-                src={ganpati.images[0]}
-                sx={{ width: 30, height: 30, borderRadius: 1 }}
-              />
-            )}
+            {ganpati?.images?.[0] && <Avatar src={ganpati.images[0]} sx={{ width: 30, height: 30, borderRadius: 1 }} />}
             <Typography variant="body2">{ganpati?.name}</Typography>
           </Box>
         );
@@ -666,65 +451,46 @@ export default function BookingManagement() {
     {
       key: 'customerName',
       label: t('booking.customer'),
-      render: (row) => (
-        <Box>
-          <Typography variant="body2">{row.customerName || (row.customer as { name: string })?.name}</Typography>
-          {row.registrationType && (
-            <Chip
-              label={row.registrationType === 'MANDAL' ? t('customer.mandal') : t('customer.home_ganpati')}
-              size="small"
-              sx={{ fontSize: 10, height: 18, textAlign: 'center' }}
-            />
-          )}
-        </Box>
-      ),
+      render: (row) => {
+        const customer = row.customer as CustomerRow;
+        return (
+          <Box>
+            <Typography variant="body2">{row.customerName || customer?.name}</Typography>
+            {row.registrationType && (
+              <Chip label={row.registrationType === 'MANDAL' ? t('customer.mandal') : t('customer.home_ganpati')}
+                size="small" sx={{ fontSize: 10, height: 18 }} />
+            )}
+          </Box>
+        );
+      },
     },
     {
       key: 'totalPrice',
       label: 'TA/PA',
       render: (row) => (
         <Box>
-          <Typography variant="body2" fontWeight={600} color="primary">
-            ₹{Number(row.totalPrice)?.toLocaleString()}
-          </Typography>
-          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.6rem' }}>
-            / ₹{Number(row.advancePayment)?.toLocaleString()}
-          </Typography>
+          <Typography variant="body2" fontWeight={600} color="primary">₹{Number(row.totalPrice)?.toLocaleString()}</Typography>
+          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.6rem' }}>/ ₹{Number(row.advancePayment)?.toLocaleString()}</Typography>
         </Box>
       ),
     },
     {
       key: 'remainingPayment',
       label: t('booking.remaining'),
-      render: (row) => (
-        <Typography color="error" fontWeight={600}>
-          ₹{Number(row.remainingPayment)?.toLocaleString()}
-        </Typography>
-      ),
+      render: (row) => <Typography color="error" fontWeight={600}>₹{Number(row.remainingPayment)?.toLocaleString()}</Typography>,
     },
     {
       key: 'status',
       label: t('booking.status'),
       render: (row) => {
-        const statusMap: Record<string, string> = {
-          'COMPLETED': t('booking.completed'),
-          'PENDING': t('booking.pending'),
-          'CANCELLED': t('booking.cancelled'),
-        };
-        return (
-          <Chip
-            label={statusMap[row.status] || row.status}
-            size="small"
-            color={getStatusColor(row.status)}
-          />
-        );
+        const map: Record<string, string> = { COMPLETED: t('booking.completed'), PENDING: t('booking.pending'), CANCELLED: t('booking.cancelled') };
+        return <Chip label={map[row.status] || row.status} size="small" color={getStatusColor(row.status)} />;
       },
     },
     { key: ACTION_KEY, label: t('table.actions') },
   ];
 
   const filteredBookings = getFilteredBookings();
-
   const totalAmount = filteredBookings.reduce((sum, row) => sum + (Number(row.totalPrice) || 0), 0);
   const paidAmount = filteredBookings.reduce((sum, row) => sum + (Number(row.advancePayment) || 0), 0);
 
@@ -740,40 +506,19 @@ export default function BookingManagement() {
     registrationType: booking.customer?.registrationType as string,
   }));
 
-  const ganpatiOptions = ganpatiList.map((g) => ({
-    value: g.id,
-    label: `${g.name} (${g.height}) - ₹${g.price.toLocaleString()}`
-  }));
+  const ganpatiOptions = ganpatiList.map((g) => ({ value: g.id, label: `${g.name} (${g.height}) - ₹${g.price.toLocaleString()}` }));
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent',
-                fontSize: { xs: '1.5rem', sm: '2rem' }
-              }}
-            >
+            <Typography variant="h4" sx={{ fontWeight: 700, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {t('admin.bookings')}
             </Typography>
             <Box display="flex" gap={1} flexWrap="wrap">
-              <Chip
-                label={`${bookings.filter((b) => b.status === 'COMPLETED').length} ${t('booking.completed')}`}
-                color="success"
-                size="small"
-              />
-              <Chip
-                label={`${bookings.filter((b) => b.status === 'PENDING').length} ${t('booking.pending')}`}
-                color="warning"
-                size="small"
-              />
+              <Chip label={`${bookings.filter((b) => b.status === 'COMPLETED').length} ${t('booking.completed')}`} color="success" size="small" />
+              <Chip label={`${bookings.filter((b) => b.status === 'PENDING').length} ${t('booking.pending')}`} color="warning" size="small" />
             </Box>
           </Box>
 
@@ -783,13 +528,9 @@ export default function BookingManagement() {
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="caption" color="textSecondary">{t('booking.total_amount_ta')}</Typography>
-                    <Typography variant="h5" fontWeight={700} sx={{ color: '#d32f2f' }}>
-                      ₹{totalAmount.toLocaleString()}
-                    </Typography>
+                    <Typography variant="h5" fontWeight={700} sx={{ color: '#d32f2f' }}>₹{totalAmount.toLocaleString()}</Typography>
                   </Box>
-                  <Avatar sx={{ bgcolor: alpha('#d32f2f', 0.1), color: '#d32f2f' }}>
-                    <MoneyIcon />
-                  </Avatar>
+                  <Avatar sx={{ bgcolor: alpha('#d32f2f', 0.1), color: '#d32f2f' }}><MoneyIcon /></Avatar>
                 </Box>
               </StatCard>
             </Grid>
@@ -798,13 +539,9 @@ export default function BookingManagement() {
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="caption" color="textSecondary">{t('booking.paid_amount_pa')}</Typography>
-                    <Typography variant="h5" fontWeight={700} sx={{ color: '#2e7d32' }}>
-                      ₹{paidAmount.toLocaleString()}
-                    </Typography>
+                    <Typography variant="h5" fontWeight={700} sx={{ color: '#2e7d32' }}>₹{paidAmount.toLocaleString()}</Typography>
                   </Box>
-                  <Avatar sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32' }}>
-                    <PaymentIcon />
-                  </Avatar>
+                  <Avatar sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32' }}><PaymentIcon /></Avatar>
                 </Box>
               </StatCard>
             </Grid>
@@ -813,45 +550,23 @@ export default function BookingManagement() {
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="caption" color="textSecondary">{t('booking.remaining_amount')}</Typography>
-                    <Typography variant="h5" fontWeight={700} sx={{ color: '#ed6c02' }}>
-                      ₹{(totalAmount - paidAmount).toLocaleString()}
-                    </Typography>
+                    <Typography variant="h5" fontWeight={700} sx={{ color: '#ed6c02' }}>₹{(totalAmount - paidAmount).toLocaleString()}</Typography>
                   </Box>
-                  <Avatar sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02' }}>
-                    <HistoryIcon />
-                  </Avatar>
+                  <Avatar sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02' }}><HistoryIcon /></Avatar>
                 </Box>
               </StatCard>
             </Grid>
           </Grid>
 
           <GlassPaper>
-            <Tabs
-              value={tabValue}
-              onChange={(_, newValue) => setTabValue(newValue)}
-              sx={{
-                px: 2,
-                pt: 2,
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: { xs: '0.7rem', sm: '0.875rem' }
-                },
-              }}
-            >
+            <Tabs value={tabValue} onChange={(_, newVal) => setTabValue(newVal)} sx={{ px: 2, pt: 2, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }}>
               <Tab label={`${t('table.all')} (${bookings.length})`} />
-              <Tab
-                label={`${t('customer.mandal')} (${bookings.filter((b) => (b.customer?.registrationType as string) === 'MANDAL').length})`}
-              />
-              <Tab
-                label={`${t('customer.home_ganpati')} (${bookings.filter((b) => (b.customer?.registrationType as string) === 'HOME').length})`}
-              />
+              <Tab label={`${t('customer.mandal')} (${bookings.filter((b) => (b.customer?.registrationType as string) === 'MANDAL').length})`} />
+              <Tab label={`${t('customer.home_ganpati')} (${bookings.filter((b) => (b.customer?.registrationType as string) === 'HOME').length})`} />
             </Tabs>
 
             <Box sx={{ px: 2, py: 1, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', bgcolor: alpha(theme.palette.primary.main, 0.02), borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-              <Typography variant="caption" fontWeight={600} color="textSecondary">
-                {t('booking.ta_pa_legend')}
-              </Typography>
+              <Typography variant="caption" fontWeight={600} color="textSecondary">{t('booking.ta_pa_legend')}</Typography>
             </Box>
 
             <UniversalTable<BookingRecord>
@@ -861,78 +576,29 @@ export default function BookingManagement() {
               rowsPerPage={10}
               showSearch
               actions={{
-                view: (row: BookingRecord) => {
-                  const originalBooking = bookings.find((b) => b.id === row.id);
-                  if (originalBooking) handleView(originalBooking);
-                },
-                edit: (row: BookingRecord) => {
-                  const originalBooking = bookings.find((b) => b.id === row.id);
-                  if (originalBooking) handleEdit(originalBooking);
-                },
-                delete: (row: BookingRecord) => {
-                  const originalBooking = bookings.find((b) => b.id === row.id);
-                  if (originalBooking) handleDelete(originalBooking);
-                },
-                send: (row: BookingRecord) => {
-                  const originalBooking = bookings.find((b) => b.id === row.id);
-                  if (originalBooking) handleSendReceipt(originalBooking);
-                },
-                download: (row: BookingRecord) => {
-                  const originalBooking = bookings.find((b) => b.id === row.id);
-                  if (originalBooking) handleDownloadReceipt(originalBooking);
-                },
+                view: (row) => { const orig = bookings.find((b) => b.id === row.id); if (orig) handleView(orig); },
+                edit: (row) => { const orig = bookings.find((b) => b.id === row.id); if (orig) handleEdit(orig); },
+                delete: (row) => { const orig = bookings.find((b) => b.id === row.id); if (orig) handleDelete(orig); },
+                send: (row) => { const orig = bookings.find((b) => b.id === row.id); if (orig) handleSendReceipt(orig); },
+                download: (row) => { const orig = bookings.find((b) => b.id === row.id); if (orig) handleDownloadReceipt(orig); },
               }}
               rowClickable
-              onRowClick={(row) => {
-                const originalBooking = bookings.find((b) => b.id === row.id);
-                if (originalBooking) handleView(originalBooking);
-              }}
+              onRowClick={(row) => { const orig = bookings.find((b) => b.id === row.id); if (orig) handleView(orig); }}
             />
           </GlassPaper>
 
-          <Dialog
-            open={dialogOpen}
-            onClose={() => !submitting && setDialogOpen(false)}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 4, maxHeight: '90vh', overflow: 'hidden' } }}
-          >
-            <DialogTitle
-              sx={{
-                background: 'linear-gradient(135deg, #E65100 0%, #F57C00 30%, #FF8F00 60%, #FFA726 100%)',
-                color: 'white',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                py: { xs: 2, sm: 2.5 },
-                px: { xs: 2, sm: 3 },
-                flexWrap: 'wrap',
-                gap: 1,
-                flexShrink: 0,
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
+          <Dialog open={dialogOpen} onClose={() => !submitting && setDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: { xs: 0, sm: 4 }, maxHeight: '90vh', overflow: 'hidden' } }}>
+            <DialogTitle sx={{ background: 'linear-gradient(135deg, #E65100 0%, #F57C00 30%, #FF8F00 60%, #FFA726 100%)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: { xs: 1.5, sm: 2.5 }, px: { xs: 2, sm: 3 }, flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
               <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                  <PaymentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  {editingBooking ? t('booking.edit') : t('booking.add')}
-                </Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}><PaymentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />{editingBooking ? t('booking.edit') : t('booking.add')}</Typography>
                 {editingBooking && editingBooking.ganpati?.images?.[0] && (
                   <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-                    <Avatar
-                      src={editingBooking.ganpati.images[0]}
-                      sx={{ width: 30, height: 30, borderRadius: 1 }}
-                    />
-                    <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                      {editingBooking.ganpati?.name} - {editingBooking.ganpati?.height}
-                    </Typography>
+                    <Avatar src={editingBooking.ganpati.images[0]} sx={{ width: 30, height: 30, borderRadius: 1 }} />
+                    <Typography variant="caption" sx={{ opacity: 0.9 }}>{editingBooking.ganpati?.name} - {editingBooking.ganpati?.height}</Typography>
                   </Box>
                 )}
               </Box>
-              <IconButton onClick={() => setDialogOpen(false)} sx={{ color: 'white', position: 'relative', zIndex: 1 }}>
-                <CloseIcon />
-              </IconButton>
+              <IconButton onClick={() => setDialogOpen(false)} sx={{ color: 'white' }}><CloseIcon /></IconButton>
             </DialogTitle>
 
             <DialogContent sx={{ p: { xs: 2, sm: 3 }, overflowY: 'auto' }}>
@@ -941,169 +607,72 @@ export default function BookingManagement() {
                   <Grid container spacing={1}>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Typography variant="caption" color="textSecondary">{t('booking.customer')}</Typography>
-                      <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                        {watch('customerName') || 'N/A'}
-                      </Typography>
+                      <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>{watch('customerName') || 'N/A'}</Typography>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Typography variant="caption" color="textSecondary">{t('customer.phone')}</Typography>
-                      <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                        {watch('customerPhone') || 'N/A'}
-                      </Typography>
+                      <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>{watch('customerPhone') || 'N/A'}</Typography>
                     </Grid>
                   </Grid>
                 </Card>
 
                 <Grid container spacing={2}>
                   <Grid size={12}>
-                    <Controller
-                      name="ganpatiId"
-                      control={control}
-                      rules={{ required: t('validation.required') }}
-                      render={({ field, fieldState }) => {
-                        const selectedGanpati = ganpatiList.find((g) => g.id === field.value);
-                        if (selectedGanpati && !editingBooking) {
-                          setValue('totalPrice', selectedGanpati.price);
-                        }
-                        return (
-                          <FormControl fullWidth size="small" error={!!fieldState.error}>
-                            <InputLabel>{t('booking.select_ganpati')}</InputLabel>
-                            <Select {...field} label={t('booking.select_ganpati')}>
-                              {ganpatiOptions.map((opt) => (
-                                <MenuItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                            {fieldState.error && (
-                              <Typography variant="caption" color="error">{fieldState.error.message}</Typography>
-                            )}
-                          </FormControl>
-                        );
-                      }}
-                    />
+                    <Controller name="ganpatiId" control={control} rules={{ required: t('validation.required') }} render={({ field, fieldState }) => {
+                      const selectedGanpati = ganpatiList.find((g) => g.id === field.value);
+                      if (selectedGanpati && !editingBooking) setValue('totalPrice', selectedGanpati.price);
+                      return (
+                        <FormControl fullWidth size="small" error={!!fieldState.error}>
+                          <InputLabel>{t('booking.select_ganpati')}</InputLabel>
+                          <Select {...field} label={t('booking.select_ganpati')}>
+                            {ganpatiOptions.map((opt) => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+                          </Select>
+                          {fieldState.error && <Typography variant="caption" color="error">{fieldState.error.message}</Typography>}
+                        </FormControl>
+                      );
+                    }} />
                   </Grid>
 
                   <Grid size={{ xs: 12, sm: 4 }}>
-                    <Controller
-                      name="totalPrice"
-                      control={control}
-                      rules={{ required: t('validation.required'), min: 0 }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          label={t('booking.total')}
-                          type="number"
-                          InputProps={{ inputProps: { min: 0, max: MAX_AMOUNT } }}
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          sx={{ '& input': { fontSize: { xs: '0.9rem', sm: '1rem' } } }}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            field.onChange(val);
-                          }}
-                        />
-                      )}
-                    />
+                    <Controller name="totalPrice" control={control} rules={{ required: t('validation.required'), min: 0 }} render={({ field, fieldState }) => (
+                      <TextField {...field} fullWidth size="small" label={t('booking.total')} type="number" InputProps={{ inputProps: { min: 0, max: MAX_AMOUNT } }} error={!!fieldState.error} helperText={fieldState.error?.message} onChange={(e) => { const val = parseFloat(e.target.value) || 0; field.onChange(val); }} />
+                    )} />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 4 }}>
-                    <Controller
-                      name="advancePayment"
-                      control={control}
-                      rules={{ required: t('validation.required'), min: 0 }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          label={t('booking.advance')}
-                          type="number"
-                          InputProps={{ inputProps: { min: 0, max: MAX_AMOUNT } }}
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          sx={{ '& input': { fontSize: { xs: '0.9rem', sm: '1rem' } } }}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            field.onChange(val);
-                          }}
-                        />
-                      )}
-                    />
+                    <Controller name="advancePayment" control={control} rules={{ required: t('validation.required'), min: 0 }} render={({ field, fieldState }) => (
+                      <TextField {...field} fullWidth size="small" label={t('booking.advance')} type="number" InputProps={{ inputProps: { min: 0, max: MAX_AMOUNT } }} error={!!fieldState.error} helperText={fieldState.error?.message} onChange={(e) => { const val = parseFloat(e.target.value) || 0; field.onChange(val); }} />
+                    )} />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 4 }}>
-                    <Controller
-                      name="remainingPayment"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          label={t('booking.remaining')}
-                          type="number"
-                          InputProps={{ readOnly: true }}
-                          sx={{ '& input': { fontSize: { xs: '0.9rem', sm: '1rem' } } }}
-                        />
-                      )}
-                    />
+                    <Controller name="remainingPayment" control={control} render={({ field }) => (
+                      <TextField {...field} fullWidth size="small" label={t('booking.remaining')} type="number" InputProps={{ readOnly: true }} />
+                    )} />
                   </Grid>
 
                   <Grid size={{ xs: 12, sm: 6 }}>
-                    <Controller
-                      name="bookingDate"
-                      control={control}
-                      render={({ field }) => (
-                        <DatePicker
-                          {...field}
-                          label={t('booking.booking_date')}
-                          slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                          value={field.value ? dayjs(field.value) : null}
-                          onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
-                        />
-                      )}
-                    />
+                    <Controller name="bookingDate" control={control} render={({ field }) => (
+                      <DatePicker {...field} label={t('booking.booking_date')} slotProps={{ textField: { size: 'small', fullWidth: true } }} value={field.value ? dayjs(field.value) : null} onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')} />
+                    )} />
                   </Grid>
                 </Grid>
 
                 <Divider sx={{ my: 3 }} />
 
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <MoneyIcon color="primary" />
-                  {t('booking.installment_payments')}
-                  <Chip
-                    label={`${installments.filter((i) => i.paidAmount > 0).length} ${t('booking.payments_made')}`}
-                    size="small"
-                    color="success"
-                  />
+                  <MoneyIcon color="primary" /> {t('booking.installment_payments')}
+                  <Chip label={`${installments.filter((i) => i.paidAmount > 0).length} ${t('booking.payments_made')}`} size="small" color="success" />
                 </Typography>
 
                 {paymentHistory.length > 0 && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <HistoryIcon fontSize="small" />
-                      {t('booking.payment_history')}
-                    </Typography>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}><HistoryIcon fontSize="small" /> {t('booking.payment_history')}</Typography>
                     {paymentHistory.map((record, idx) => (
                       <Paper key={idx} sx={{ p: 1.5, mb: 1, borderRadius: 2, bgcolor: '#faf8f6' }}>
                         <Grid container spacing={1} alignItems="center">
-                          <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">{t('booking.date')}</Typography>
-                            <Typography variant="body2">{record.date}</Typography>
-                          </Grid>
-                          <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">{t('booking.amount')}</Typography>
-                            <Typography variant="body2" fontWeight={600} color="primary">₹{record.amount.toLocaleString()}</Typography>
-                          </Grid>
-                          <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">{t('booking.type')}</Typography>
-                            <Chip label={record.type} size="small" sx={{ fontSize: 10, height: 18 }} />
-                          </Grid>
-                          <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography>
-                            <Typography variant="body2" fontWeight={600} color="error">₹{record.remainingAfter.toLocaleString()}</Typography>
-                          </Grid>
+                          <Grid size={{ xs: 6 }}><Typography variant="caption" color="textSecondary">{t('booking.date')}</Typography><Typography variant="body2">{record.date}</Typography></Grid>
+                          <Grid size={{ xs: 6 }}><Typography variant="caption" color="textSecondary">{t('booking.amount')}</Typography><Typography variant="body2" fontWeight={600} color="primary">₹{record.amount.toLocaleString()}</Typography></Grid>
+                          <Grid size={{ xs: 6 }}><Typography variant="caption" color="textSecondary">{t('booking.type')}</Typography><Chip label={record.type} size="small" sx={{ fontSize: 10, height: 18 }} /></Grid>
+                          <Grid size={{ xs: 6 }}><Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography><Typography variant="body2" fontWeight={600} color="error">₹{record.remainingAfter.toLocaleString()}</Typography></Grid>
                         </Grid>
                       </Paper>
                     ))}
@@ -1113,92 +682,37 @@ export default function BookingManagement() {
                 {installments.map((inst) => (
                   <Card key={inst.id} sx={{ mb: 2, p: 2, borderRadius: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}` }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} flexWrap="wrap" gap={1}>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {t('booking.installment')} #{inst.id}
-                        {inst.isFinal && (
-                          <Chip label={t('booking.final')} size="small" color="success" sx={{ ml: 1 }} />
-                        )}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {t('booking.remaining')}: ₹{inst.remainingAmount.toLocaleString()}
-                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={600}>{t('booking.installment')} #{inst.id}{inst.isFinal && <Chip label={t('booking.final')} size="small" color="success" sx={{ ml: 1 }} />}</Typography>
+                      <Typography variant="caption" color="textSecondary">{t('booking.remaining')}: ₹{inst.remainingAmount.toLocaleString()}</Typography>
                     </Box>
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12, sm: 4 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label={t('booking.remaining')}
-                          value={inst.remainingAmount.toLocaleString()}
-                          InputProps={{ readOnly: true }}
-                          sx={{ '& input': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
-                        />
+                        <TextField fullWidth size="small" label={t('booking.remaining')} value={inst.remainingAmount.toLocaleString()} InputProps={{ readOnly: true }} />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label={t('booking.pay_amount')}
-                          type="number"
-                          value={inst.paidAmount || ''}
-                          InputProps={{ inputProps: { min: 0, max: inst.remainingAmount } }}
-                          sx={{ '& input': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
-                          onChange={(e) => {
-                            handleInstallmentChange(inst.id, e.target.value);
-                          }}
-                        />
+                        <TextField fullWidth size="small" label={t('booking.pay_amount')} type="number" value={inst.paidAmount || ''} InputProps={{ inputProps: { min: 0, max: inst.remainingAmount } }} onChange={(e) => handleInstallmentChange(inst.id, e.target.value)} />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label={t('booking.new_remaining')}
-                          value={inst.newRemaining.toLocaleString()}
-                          InputProps={{ readOnly: true }}
-                          sx={{ '& input': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
-                        />
+                        <TextField fullWidth size="small" label={t('booking.new_remaining')} value={inst.newRemaining.toLocaleString()} InputProps={{ readOnly: true }} />
                       </Grid>
                     </Grid>
                   </Card>
                 ))}
 
                 {installments.length > 0 && installments[installments.length - 1].newRemaining > 0 && (
-                  <Button
-                    variant="outlined"
-                    onClick={handleAddInstallment}
-                    startIcon={<PaymentIcon />}
-                    sx={{ mb: 2, borderRadius: 30, width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('booking.add_installment')}
-                  </Button>
+                  <Button variant="outlined" onClick={handleAddInstallment} startIcon={<PaymentIcon />} sx={{ mb: 2, borderRadius: 30, width: { xs: '100%', sm: 'auto' } }}>{t('booking.add_installment')}</Button>
                 )}
-
                 {installments.length > 0 && installments[installments.length - 1].newRemaining === 0 && (
                   <Box sx={{ mb: 2, p: 2, bgcolor: alpha(theme.palette.success.main, 0.1), borderRadius: 2, border: `1px solid ${theme.palette.success.main}` }}>
-                    <Typography variant="body2" color="success.main" fontWeight={600}>
-                      {t('booking.all_payments_completed')}
-                    </Typography>
+                    <Typography variant="body2" color="success.main" fontWeight={600}>{t('booking.all_payments_completed')}</Typography>
                   </Box>
                 )}
 
                 <Grid container spacing={2}>
                   <Grid size={12}>
-                    <Controller
-                      name="notes"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          label={t('booking.notes')}
-                          multiline
-                          rows={2}
-                          placeholder={t('booking.add_payment_notes')}
-                          sx={{ '& textarea': { fontSize: { xs: '0.85rem', sm: '0.9rem' } } }}
-                        />
-                      )}
-                    />
+                    <Controller name="notes" control={control} render={({ field }) => (
+                      <TextField {...field} fullWidth size="small" label={t('booking.notes')} multiline rows={2} placeholder={t('booking.add_payment_notes')} />
+                    )} />
                   </Grid>
                 </Grid>
 
@@ -1207,86 +721,22 @@ export default function BookingManagement() {
             </DialogContent>
 
             <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button onClick={() => setDialogOpen(false)} disabled={submitting} variant="outlined" sx={{ flex: { xs: 1, sm: 'none' } }}>
-                {t('button.cancel')}
-              </Button>
-              <Button
-                variant="contained"
-                disabled={submitting}
-                onClick={() => handleSubmit((data) => onSubmit(data, 'submit'))()}
-                startIcon={<SaveIcon />}
-                sx={{
-                  bgcolor: '#1976d2',
-                  flex: { xs: 1, sm: 'none' },
-                  '&:hover': { bgcolor: '#1565c0' }
-                }}
-              >
-                {submitting && actionType === 'submit' ? t('table.loading') : t('booking.save_only')}
-              </Button>
-              <Button
-                variant="contained"
-                disabled={submitting}
-                onClick={() => handleSubmit((data) => onSubmit(data, 'send'))()}
-                startIcon={<SendIcon />}
-                sx={{
-                  bgcolor: '#25D366',
-                  flex: { xs: 1, sm: 'none' },
-                  '&:hover': { bgcolor: '#128C7E' }
-                }}
-              >
-                {submitting && actionType === 'send' ? t('table.loading') : t('booking.save_send')}
-              </Button>
-              <Button
-                variant="contained"
-                disabled={submitting}
-                onClick={() => handleSubmit((data) => onSubmit(data, 'download'))()}
-                startIcon={<DownloadIcon />}
-                sx={{
-                  background: 'linear-gradient(135deg, #E65100, #FF8F00)',
-                  flex: { xs: 1, sm: 'none' },
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 8px 25px ${alpha('#E65100', 0.4)}`,
-                  },
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                {submitting && actionType === 'download' ? t('table.loading') : t('booking.save_download')}
-              </Button>
+              <Button onClick={() => setDialogOpen(false)} disabled={submitting} variant="outlined" sx={{ flex: { xs: 1, sm: 'none' } }}>{t('button.cancel')}</Button>
+              <Button variant="contained" disabled={submitting} onClick={() => handleSubmit((data) => onSubmit(data, 'submit'))()} startIcon={<SaveIcon />} sx={{ bgcolor: '#1976d2', flex: { xs: 1, sm: 'none' } }}>{submitting && actionType === 'submit' ? t('table.loading') : t('booking.save_only')}</Button>
+              <Button variant="contained" disabled={submitting} onClick={() => handleSubmit((data) => onSubmit(data, 'send'))()} startIcon={<SendIcon />} sx={{ bgcolor: '#25D366', flex: { xs: 1, sm: 'none' } }}>{submitting && actionType === 'send' ? t('table.loading') : t('booking.save_send')}</Button>
+              <Button variant="contained" disabled={submitting} onClick={() => handleSubmit((data) => onSubmit(data, 'download'))()} startIcon={<DownloadIcon />} sx={{ background: 'linear-gradient(135deg, #E65100, #FF8F00)', flex: { xs: 1, sm: 'none' }, transition: 'all 0.3s ease' }}>{submitting && actionType === 'download' ? t('table.loading') : t('booking.save_download')}</Button>
             </DialogActions>
           </Dialog>
 
-          <Dialog
-            open={viewDialogOpen}
-            onClose={() => setViewDialogOpen(false)}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}
-          >
-            <DialogTitle
-              sx={{
-                background: 'linear-gradient(135deg, #E65100 0%, #F57C00 30%, #FF8F00 60%, #FFA726 100%)',
-                color: 'white',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                py: 2.5,
-                px: 3,
-                flexWrap: 'wrap',
-                gap: 1
-              }}
-            >
+          <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
+            <DialogTitle sx={{ background: 'linear-gradient(135deg, #E65100 0%, #F57C00 30%, #FF8F00 60%, #FFA726 100%)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2.5, px: 3, flexWrap: 'wrap', gap: 1 }}>
               <Box display="flex" alignItems="center" gap={1.5}>
                 <ReceiptIcon sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                  {t('booking.booking_details')}
-                </Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{t('booking.booking_details')}</Typography>
               </Box>
               <Box display="flex" alignItems="center" gap={1}>
                 {viewBooking && <StatusChip status={viewBooking.status} />}
-                <IconButton onClick={() => setViewDialogOpen(false)} sx={{ color: 'white' }}>
-                  <CloseIcon />
-                </IconButton>
+                <IconButton onClick={() => setViewDialogOpen(false)} sx={{ color: 'white' }}><CloseIcon /></IconButton>
               </Box>
             </DialogTitle>
 
@@ -1295,44 +745,19 @@ export default function BookingManagement() {
                 <Box>
                   <Grid container spacing={2} sx={{ mb: 3 }}>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <Paper sx={{
-                        p: 2.5,
-                        borderRadius: 3,
-                        bgcolor: 'white',
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                        border: '1px solid #f0ebe6',
-                        height: '100%'
-                      }}>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PersonIcon fontSize="small" /> {t('booking.customer_info')}
-                        </Typography>
+                      <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', height: '100%' }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" /> {t('booking.customer_info')}</Typography>
                         <ViewDetailRow label={t('customer.name')} value={viewBooking.customerName} icon={<PersonIcon sx={{ fontSize: 18 }} />} />
                         <ViewDetailRow label={t('customer.phone')} value={viewBooking.customerPhone} icon={<PhoneIcon sx={{ fontSize: 18 }} />} />
-                        {viewBooking.mandalName && viewBooking.mandalName !== 'N/A' && (
-                          <ViewDetailRow label={t('customer.mandal_name')} value={viewBooking.mandalName} />
-                        )}
+                        {viewBooking.mandalName && viewBooking.mandalName !== 'N/A' && <ViewDetailRow label={t('customer.mandal_name')} value={viewBooking.mandalName} />}
                         <ViewDetailRow label={t('customer.address')} value={viewBooking.customerAddress} icon={<LocationOnIcon sx={{ fontSize: 18 }} />} />
                       </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <Paper sx={{
-                        p: 2.5,
-                        borderRadius: 3,
-                        bgcolor: 'white',
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                        border: '1px solid #f0ebe6',
-                        height: '100%'
-                      }}>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CategoryIcon fontSize="small" /> {t('booking.ganpati_info')}
-                        </Typography>
+                      <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', height: '100%' }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><CategoryIcon fontSize="small" /> {t('booking.ganpati_info')}</Typography>
                         {viewBooking.ganpatiImages && viewBooking.ganpatiImages.length > 0 && (
-                          <Box sx={{ mb: 2 }}>
-                            <Avatar
-                              src={viewBooking.ganpatiImages[0]}
-                              sx={{ width: 60, height: 60, borderRadius: 2 }}
-                            />
-                          </Box>
+                          <Box sx={{ mb: 2 }}><Avatar src={viewBooking.ganpatiImages[0]} sx={{ width: 60, height: 60, borderRadius: 2 }} /></Box>
                         )}
                         <ViewDetailRow label={t('ganpati.name')} value={viewBooking.ganpatiName} />
                         <ViewDetailRow label={t('ganpati.height')} value={viewBooking.ganpatiHeight} />
@@ -1341,132 +766,59 @@ export default function BookingManagement() {
                     </Grid>
                   </Grid>
 
-                  <Paper sx={{
-                    p: 2.5,
-                    borderRadius: 3,
-                    bgcolor: 'white',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                    border: '1px solid #f0ebe6',
-                    mb: 3
-                  }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <MoneyIcon fontSize="small" /> {t('booking.payment_summary')}
-                    </Typography>
+                  <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', mb: 3 }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><MoneyIcon fontSize="small" /> {t('booking.payment_summary')}</Typography>
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Box sx={{ p: 1.5, bgcolor: '#fff5f0', borderRadius: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="textSecondary">{t('booking.total')}</Typography>
-                          <Typography variant="h6" fontWeight={700} sx={{ color: '#d32f2f' }}>
-                            ₹{viewBooking.totalPrice?.toLocaleString() || 0}
-                          </Typography>
+                          <Typography variant="h6" fontWeight={700} sx={{ color: '#d32f2f' }}>₹{viewBooking.totalPrice?.toLocaleString() || 0}</Typography>
                         </Box>
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Box sx={{ p: 1.5, bgcolor: '#e8f5e9', borderRadius: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="textSecondary">{t('booking.paid_so_far')}</Typography>
-                          <Typography variant="h6" fontWeight={700} sx={{ color: '#2e7d32' }}>
-                            ₹{viewBooking.totalPaidSoFar?.toLocaleString() || 0}
-                          </Typography>
+                          <Typography variant="h6" fontWeight={700} sx={{ color: '#2e7d32' }}>₹{viewBooking.totalPaidSoFar?.toLocaleString() || 0}</Typography>
                         </Box>
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Box sx={{ p: 1.5, bgcolor: '#fff3e0', borderRadius: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography>
-                          <Typography variant="h6" fontWeight={700} sx={{ color: '#ed6c02' }}>
-                            ₹{viewBooking.remainingPayment?.toLocaleString() || 0}
-                          </Typography>
+                          <Typography variant="h6" fontWeight={700} sx={{ color: '#ed6c02' }}>₹{viewBooking.remainingPayment?.toLocaleString() || 0}</Typography>
                         </Box>
                       </Grid>
                     </Grid>
                   </Paper>
 
                   {viewBooking.paymentHistory && viewBooking.paymentHistory.length > 0 && (
-                    <Paper sx={{
-                      p: 2.5,
-                      borderRadius: 3,
-                      bgcolor: 'white',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                      border: '1px solid #f0ebe6',
-                      mb: 3
-                    }}>
-                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <HistoryIcon fontSize="small" /> {t('booking.payment_history')}
-                      </Typography>
+                    <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', mb: 3 }}>
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><HistoryIcon fontSize="small" /> {t('booking.payment_history')}</Typography>
                       {viewBooking.paymentHistory.map((record, idx) => (
-                        <Box key={idx} sx={{
-                          p: 1.5,
-                          mb: 1,
-                          borderRadius: 2,
-                          bgcolor: '#faf8f6',
-                          border: '1px solid #f0ebe6',
-                          '&:last-child': { mb: 0 }
-                        }}>
+                        <Box key={idx} sx={{ p: 1.5, mb: 1, borderRadius: 2, bgcolor: '#faf8f6', border: '1px solid #f0ebe6', '&:last-child': { mb: 0 } }}>
                           <Grid container spacing={1} alignItems="center">
-                            <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">{t('booking.date')}</Typography>
-                              <Typography variant="body2" fontWeight={500}>{record.date}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">{t('booking.amount')}</Typography>
-                              <Typography variant="body2" fontWeight={600} color="primary">₹{record.amount?.toLocaleString() || 0}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">{t('booking.type')}</Typography>
-                              <Chip label={record.type || 'INSTALLMENT'} size="small" sx={{ fontSize: 10, height: 20 }} />
-                            </Grid>
-                            <Grid size={{ xs: 6, sm: 3 }}>
-                              <Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography>
-                              <Typography variant="body2" fontWeight={600} color="error">₹{record.remainingAfter?.toLocaleString() || 0}</Typography>
-                            </Grid>
+                            <Grid size={{ xs: 6, sm: 3 }}><Typography variant="caption" color="textSecondary">{t('booking.date')}</Typography><Typography variant="body2" fontWeight={500}>{record.date}</Typography></Grid>
+                            <Grid size={{ xs: 6, sm: 3 }}><Typography variant="caption" color="textSecondary">{t('booking.amount')}</Typography><Typography variant="body2" fontWeight={600} color="primary">₹{record.amount?.toLocaleString() || 0}</Typography></Grid>
+                            <Grid size={{ xs: 6, sm: 3 }}><Typography variant="caption" color="textSecondary">{t('booking.type')}</Typography><Chip label={record.type || 'INSTALLMENT'} size="small" sx={{ fontSize: 10, height: 20 }} /></Grid>
+                            <Grid size={{ xs: 6, sm: 3 }}><Typography variant="caption" color="textSecondary">{t('booking.remaining')}</Typography><Typography variant="body2" fontWeight={600} color="error">₹{record.remainingAfter?.toLocaleString() || 0}</Typography></Grid>
                           </Grid>
                         </Box>
                       ))}
                     </Paper>
                   )}
 
-                  <Paper sx={{
-                    p: 2.5,
-                    borderRadius: 3,
-                    bgcolor: 'white',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                    border: '1px solid #f0ebe6',
-                    mb: 3
-                  }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CalendarTodayIcon fontSize="small" /> {t('booking.dates_status')}
-                    </Typography>
+                  <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', mb: 3 }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><CalendarTodayIcon fontSize="small" /> {t('booking.dates_status')}</Typography>
                     <Grid container spacing={2}>
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <ViewDetailRow label={t('booking.booking_date')} value={viewBooking.bookingDate} icon={<CalendarTodayIcon sx={{ fontSize: 18 }} />} />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <ViewDetailRow label={t('booking.created_at')} value={viewBooking.createdAt} />
-                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}><ViewDetailRow label={t('booking.booking_date')} value={viewBooking.bookingDate} icon={<CalendarTodayIcon sx={{ fontSize: 18 }} />} /></Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}><ViewDetailRow label={t('booking.created_at')} value={viewBooking.createdAt} /></Grid>
                     </Grid>
                   </Paper>
 
                   {viewBooking.contactPersons && viewBooking.contactPersons.length > 0 && (
-                    <Paper sx={{
-                      p: 2.5,
-                      borderRadius: 3,
-                      bgcolor: 'white',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                      border: '1px solid #f0ebe6',
-                      mb: 3
-                    }}>
-                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <PersonIcon fontSize="small" /> {t('booking.contact_persons')}
-                      </Typography>
+                    <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', mb: 3 }}>
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" /> {t('booking.contact_persons')}</Typography>
                       {viewBooking.contactPersons.map((person, idx) => (
-                        <Box key={idx} sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          py: 1,
-                          borderBottom: '1px dashed #f0ebe6',
-                          flexWrap: 'wrap',
-                          gap: 0.5,
-                          '&:last-child': { borderBottom: 'none' }
-                        }}>
+                        <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px dashed #f0ebe6', flexWrap: 'wrap', gap: 0.5, '&:last-child': { borderBottom: 'none' } }}>
                           <Typography variant="body2" fontWeight={500}>{person.name}</Typography>
                           <Typography variant="body2">{person.phone}</Typography>
                           <Typography variant="caption" color="textSecondary">{person.designation}</Typography>
@@ -1476,145 +828,47 @@ export default function BookingManagement() {
                   )}
 
                   {viewBooking.notes && viewBooking.notes !== 'N/A' && (
-                    <Paper sx={{
-                      p: 2.5,
-                      borderRadius: 3,
-                      bgcolor: 'white',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                      border: '1px solid #f0ebe6',
-                      mb: 3
-                    }}>
-                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <InfoIcon fontSize="small" /> {t('booking.notes')}
-                      </Typography>
+                    <Paper sx={{ p: 2.5, borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0ebe6', mb: 3 }}>
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}><InfoIcon fontSize="small" /> {t('booking.notes')}</Typography>
                       <Typography variant="body2" sx={{ color: '#555', lineHeight: 1.6 }}>{viewBooking.notes}</Typography>
                     </Paper>
                   )}
 
                   <Box display="flex" gap={2} flexWrap="wrap">
-                    <Button
-                      variant="contained"
-                      startIcon={<SendIcon />}
-                      onClick={() => {
-                        const booking = bookings.find((b) => b.id === viewBooking.id);
-                        if (booking) handleSendReceipt(booking);
-                      }}
-                      sx={{
-                        bgcolor: '#25D366',
-                        '&:hover': { bgcolor: '#128C7E' },
-                        borderRadius: 3,
-                        px: 3
-                      }}
-                    >
-                      {t('booking.send_receipt')}
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={<ReceiptIcon />}
-                      onClick={async () => {
-                        const booking = bookings.find((b) => b.id === viewBooking.id);
-                        if (booking) {
-                          try {
-                            const response = await adminService.generateReceipt(booking.id);
-                            if (response.success && response.data) {
-                              showSnackbar('success', `Receipt generated! Link: ${response.data.receiptUrl}`);
-                              navigator.clipboard.writeText(response.data.receiptUrl);
-                            } else {
-                              showSnackbar('error', response.message || 'Failed to generate receipt');
-                            }
-                          } catch  {
-                            showSnackbar('error', 'Failed to generate receipt');
-                          }
-                        }
-                      }}
-                      sx={{ 
-                        bgcolor: '#1976d2',
-                        '&:hover': { bgcolor: '#1565c0' },
-                        borderRadius: 3,
-                        px: 3
-                      }}
-                    >
-                      Generate & Copy Link
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={<ReceiptIcon />}
-                      onClick={async () => {
-                        const booking = bookings.find((b) => b.id === viewBooking.id);
-                        if (booking) {
-                          try {
-                            const response = await adminService.generateReceipt(booking.id);
-                            if (response.success && response.data) {
-                              const message = `Namaste 🙏\n\nYour booking has been confirmed.\n\nYou can view and download your receipt using the link below.\n${response.data.receiptUrl}`;
-                              const encoded = encodeURIComponent(message);
-                              window.open(`https://wa.me/?text=${encoded}`, '_blank');
-                              showSnackbar('success', 'Receipt link sent via WhatsApp');
-                            } else {
-                              showSnackbar('error', response.message || 'Failed to generate receipt');
-                            }
-                          } catch {
-                            showSnackbar('error', 'Failed to generate receipt');
-                          }
-                        }
-                      }}
-                      sx={{ 
-                        bgcolor: '#25D366',
-                        '&:hover': { bgcolor: '#128C7E' },
-                        borderRadius: 3,
-                        px: 3
-                      }}
-                    >
-                      Generate & Send WhatsApp
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={<DownloadIcon />}
-                      onClick={() => {
-                        const booking = bookings.find((b) => b.id === viewBooking.id);
-                        if (booking) handleDownloadReceipt(booking);
-                      }}
-                      sx={{
-                        background: 'linear-gradient(135deg, #E65100, #FF8F00)',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: `0 8px 25px ${alpha('#E65100', 0.4)}`,
-                        },
-                        borderRadius: 3,
-                        px: 3,
-                        transition: 'all 0.3s ease',
-                      }}
-                    >
-                      {t('booking.download_pdf')}
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<EditIcon />}
-                      onClick={() => {
-                        setViewDialogOpen(false);
-                        const booking = bookings.find((b) => b.id === viewBooking.id);
-                        if (booking) handleEdit(booking);
-                      }}
-                      sx={{
-                        bgcolor: '#1976d2',
-                        '&:hover': { bgcolor: '#1565c0' },
-                        borderRadius: 3,
-                        px: 3
-                      }}
-                    >
-                      {t('booking.edit_booking')}
-                    </Button>
+                    <Button variant="contained" startIcon={<SendIcon />} onClick={() => { const booking = bookings.find((b) => b.id === viewBooking.id); if (booking) handleSendReceipt(booking); }} sx={{ bgcolor: '#25D366', borderRadius: 3, px: 3, flex: { xs: '1 1 100%', sm: 'none' } }}>{t('booking.send_receipt')}</Button>
+                    <Button variant="contained" startIcon={<ReceiptIcon />} onClick={async () => {
+                      const booking = bookings.find((b) => b.id === viewBooking.id);
+                      if (booking) {
+                        const res = await adminService.generateReceipt(booking.id);
+                        if (res.success && res.data) { showSnackbar('success', `Receipt link: ${res.data.receiptUrl}`); navigator.clipboard.writeText(res.data.receiptUrl); } else showSnackbar('error', res.message || 'Failed');
+                      }
+                    }} sx={{ bgcolor: '#1976d2', borderRadius: 3, px: 3, flex: { xs: '1 1 100%', sm: 'none' } }}>Generate & Copy Link</Button>
+                    <Button variant="contained" startIcon={<ReceiptIcon />} onClick={async () => {
+                      const booking = bookings.find((b) => b.id === viewBooking.id);
+                      if (booking) {
+                        const res = await adminService.generateReceipt(booking.id);
+                        if (res.success && res.data) {
+                          const msg = `Namaste 🙏\n\nYour booking receipt is ready.\n\n${res.data.receiptUrl}`;
+                          const encoded = encodeURIComponent(msg);
+                          const customer = booking.customer;
+                          const numbers: string[] = [];
+                          if (customer?.phone) numbers.push(customer.phone);
+                          else if (booking.customerPhone) numbers.push(booking.customerPhone);
+                          if (booking.additionalContacts) booking.additionalContacts.forEach(c => { if (c.phone) numbers.push(c.phone); });
+                          if (customer?.contactPersons) customer.contactPersons.forEach(c => { if (c.phone) numbers.push(c.phone); });
+                          numbers.forEach(phone => window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank'));
+                          showSnackbar('success', `Link sent to ${numbers.length} number(s)`);
+                        } else showSnackbar('error', res.message || 'Failed');
+                      }
+                    }} sx={{ bgcolor: '#25D366', borderRadius: 3, px: 3, flex: { xs: '1 1 100%', sm: 'none' } }}>Generate & Send WhatsApp</Button>
+                    <Button variant="contained" startIcon={<DownloadIcon />} onClick={() => { const booking = bookings.find((b) => b.id === viewBooking.id); if (booking) handleDownloadReceipt(booking); }} sx={{ background: 'linear-gradient(135deg, #E65100, #FF8F00)', borderRadius: 3, px: 3, flex: { xs: '1 1 100%', sm: 'none' } }}>{t('booking.download_pdf')}</Button>
+                    <Button variant="contained" startIcon={<EditIcon />} onClick={() => { setViewDialogOpen(false); const booking = bookings.find((b) => b.id === viewBooking.id); if (booking) handleEdit(booking); }} sx={{ bgcolor: '#1976d2', borderRadius: 3, px: 3, flex: { xs: '1 1 100%', sm: 'none' } }}>{t('booking.edit_booking')}</Button>
                   </Box>
                 </Box>
               )}
             </DialogContent>
-
             <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6' }}>
-              <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>
-                {t('button.close')}
-              </Button>
+              <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ borderRadius: 3, px: 3 }}>{t('button.close')}</Button>
             </DialogActions>
           </Dialog>
         </Box>
