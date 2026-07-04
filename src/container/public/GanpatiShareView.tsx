@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Box, Typography, Grid, Card, CardContent, Container,
-  Chip, alpha, styled, LinearProgress, Button} from '@mui/material';
+  Chip, alpha, styled, LinearProgress, Button
+} from '@mui/material';
 import { WhatsApp } from '@mui/icons-material';
 import { config } from '@/constants/config';
 import { apiClient } from '@/services/api';
@@ -55,6 +56,7 @@ export default function GanpatiShareView() {
 
     const fetchSharedGanpati = async () => {
       try {
+        // Fetch the collection data
         const collectionRes = await apiClient<{ data: ShareCollectionResponse }>(`/share/collection/${token}`);
         if (!collectionRes.data) {
           setError('Invalid or expired link');
@@ -64,14 +66,18 @@ export default function GanpatiShareView() {
 
         setCollection(collectionRes.data);
 
+        // Fetch all Ganpati and filter by IDs from collection
         const ganpatiRes = await apiClient<{ data: GanpatiResponseDto[] }>('/ganpati/all');
         if (ganpatiRes.data) {
           const filtered = ganpatiRes.data.filter(g => 
             collectionRes.data.ganpatiIds.includes(g.id)
           );
           setGanpatiList(filtered);
+        } else {
+          setGanpatiList([]);
         }
-      } catch {
+      } catch (err) {
+        console.error('Error fetching share collection:', err);
         setError('Invalid or expired link');
       } finally {
         setLoading(false);
@@ -100,7 +106,7 @@ export default function GanpatiShareView() {
     );
   }
 
-  if (error) {
+  if (error || !collection || !collection.isActive) {
     return (
       <OrangeBackground>
         <Container sx={{ textAlign: 'center', py: 8 }}>
@@ -108,10 +114,28 @@ export default function GanpatiShareView() {
             🙏
           </Typography>
           <Typography variant="h6" color="white">
-            {error}
+            {error || 'This link has expired or is invalid.'}
           </Typography>
           <Typography variant="body1" color="rgba(255,255,255,0.8)" sx={{ mt: 2 }}>
-            The link may have expired or is invalid.
+            Please contact the admin for a new link.
+          </Typography>
+        </Container>
+      </OrangeBackground>
+    );
+  }
+
+  if (ganpatiList.length === 0) {
+    return (
+      <OrangeBackground>
+        <Container sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h4" color="white" gutterBottom>
+            🐘
+          </Typography>
+          <Typography variant="h6" color="white">
+            No Ganpati found in this collection.
+          </Typography>
+          <Typography variant="body1" color="rgba(255,255,255,0.8)" sx={{ mt: 2 }}>
+            The collection may be empty.
           </Typography>
         </Container>
       </OrangeBackground>
@@ -136,6 +160,9 @@ export default function GanpatiShareView() {
           </Typography>
           <Typography variant="subtitle1" sx={{ color: alpha('#fff', 0.9) }}>
             Shared by {collection?.createdBy}
+          </Typography>
+          <Typography variant="caption" sx={{ color: alpha('#fff', 0.6) }}>
+            {ganpatiList.length} Ganpati idols
           </Typography>
         </Box>
 
@@ -176,7 +203,7 @@ export default function GanpatiShareView() {
                     fullWidth
                     variant="contained"
                     size="small"
-                    onClick={() => window.location.href = `https://wa.me/${config.ADMIN_WHATSAPP}`}
+                    onClick={() => window.open(`https://wa.me/${config.ADMIN_WHATSAPP}?text=${encodeURIComponent(`Namaste 🙏\n\nI'm interested in ${ganpati.name} (${ganpati.height}) - ₹${ganpati.price.toLocaleString()}`)}`, '_blank')}
                     startIcon={<WhatsApp />}
                     sx={{ mt: 1.5, bgcolor: '#25D366', '&:hover': { bgcolor: '#128C7E' } }}
                   >
@@ -187,12 +214,6 @@ export default function GanpatiShareView() {
             </Grid>
           ))}
         </Grid>
-
-        {ganpatiList.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 4, color: 'white' }}>
-            <Typography>No Ganpati found in this collection.</Typography>
-          </Box>
-        )}
 
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Button
