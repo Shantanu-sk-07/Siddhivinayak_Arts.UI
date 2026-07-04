@@ -320,7 +320,7 @@ export default function HomePage() {
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' }
                         }}
                       >
-                        <AnimatePresence mode="wait">
+                        <AnimatePresence>
                           {ganpati.likedBy?.includes('user_id') ? (
                             <motion.div
                               key="liked"

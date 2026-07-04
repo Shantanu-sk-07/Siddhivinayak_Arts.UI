@@ -79,7 +79,7 @@ export default function WebsiteLayout() {
 
       {/* Topbar slogan ticker */}
       <Box sx={{ background: P.grad, py: 0.5, overflow: "hidden" }}>
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div key={sloganIdx}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.4 }}

@@ -7,6 +7,15 @@ interface ApiOptions extends RequestInit {
 
 const API_BASE_URL = getApiBaseUrl();
 
+const parseResponse = async (response: Response) => {
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return response.json();
+  }
+  const text = await response.text();
+  return { message: text || `Request failed with status ${response.status}` };
+};
+
 export const apiClient = async <T = unknown>(
   endpoint: string,
   options: ApiOptions = {}
@@ -27,14 +36,13 @@ export const apiClient = async <T = unknown>(
   }
 
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, {
       ...options,
       headers,
     });
 
-    // Only clear token on 401 (Unauthorized), not on 403 (Forbidden)
     if (response.status === 401) {
       clearToken();
       if (!window.location.pathname.includes('/login')) {
@@ -43,12 +51,12 @@ export const apiClient = async <T = unknown>(
       throw new Error('Session expired. Please login again.');
     }
 
-    const data = await response.json();
-    
+    const data = await parseResponse(response);
+
     if (!response.ok) {
       throw new Error(data.message || `Request failed with status ${response.status}`);
     }
-    
+
     return data;
   } catch (error) {
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
@@ -71,7 +79,7 @@ export const apiFormData = async <T = unknown>(
   }
 
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, {
       method,
@@ -87,12 +95,12 @@ export const apiFormData = async <T = unknown>(
       throw new Error('Session expired. Please login again.');
     }
 
-    const data = await response.json();
-    
+    const data = await parseResponse(response);
+
     if (!response.ok) {
       throw new Error(data.message || `Request failed with status ${response.status}`);
     }
-    
+
     return data;
   } catch (error) {
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
