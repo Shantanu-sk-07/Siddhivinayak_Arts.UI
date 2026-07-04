@@ -7,12 +7,14 @@ import {
 } from '@mui/material';
 import {
   Download, Receipt as ReceiptIcon, WhatsApp, CheckCircle,
-  Payment, Person, Phone, LocationOn, 
-  AttachMoney, Category, Height
+  Payment, Person, Phone, LocationOn,
+  AttachMoney, History, Category, Height
 } from '@mui/icons-material';
 import { apiClient } from '@/services/api';
 import { Helmet } from 'react-helmet-async';
 import { showSnackbar } from '@/components/uncontrolled/ToastMessage';
+import { downloadReceiptPDF } from '@/utils/ReceiptGenerator';
+import { ConfirmedBooking } from '@/types/MurtiType';
 
 interface ReceiptResponse {
   token: string;
@@ -75,6 +77,7 @@ export default function ReceiptView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptResponse | null>(null);
+  const [booking, setBooking] = useState<ConfirmedBooking | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
@@ -93,7 +96,14 @@ export default function ReceiptView() {
           return;
         }
         setReceipt(response.data);
-      } catch {
+
+        // Fetch booking details using bookingId
+        const bookingRes = await apiClient<{ data: ConfirmedBooking }>(`/admin/bookings/${response.data.bookingId}`);
+        if (bookingRes.data) {
+          setBooking(bookingRes.data);
+        }
+      } catch (err) {
+        console.error('Error fetching receipt:', err);
         setError('Invalid or expired receipt link');
       } finally {
         setLoading(false);
@@ -103,60 +113,52 @@ export default function ReceiptView() {
     fetchReceipt();
   }, [token]);
 
-  const handleViewPDF = async () => {
-    if (!receipt?.pdfPath) {
-      showSnackbar('error', 'PDF not available');
-      return;
-    }
-
-    setPdfLoading(true);
-    try {
-      const response = await fetch(receipt.pdfPath);
-      if (!response.ok) throw new Error('Failed to fetch PDF');
-      const blob = await response.blob();
-      if (blob.type !== 'application/pdf') {
-        window.open(receipt.pdfPath, '_blank');
-        setPdfLoading(false);
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const newWindow = window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      if (!newWindow) window.open(receipt.pdfPath, '_blank');
-    } catch {
-      window.open(receipt.pdfPath, '_blank');
-    } finally {
-      setPdfLoading(false);
-    }
-  };
-
   const handleDownloadPDF = async () => {
-    if (!receipt?.pdfPath) {
-      showSnackbar('error', 'PDF not available');
+    if (!booking) {
+      showSnackbar('error', 'Booking data not available');
       return;
     }
 
     setPdfLoading(true);
     try {
-      const response = await fetch(receipt.pdfPath);
-      if (!response.ok) throw new Error('Failed to fetch PDF');
-      const blob = await response.blob();
-      if (blob.type !== 'application/pdf' || blob.size < 1000) {
-        window.open(receipt.pdfPath, '_blank');
-        setPdfLoading(false);
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Receipt-${receipt.token.substring(0, 8)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      // Prepare receipt data for frontend PDF generator
+      const customer = booking.customer;
+      const receiptData = {
+        receiptNumber: booking.receiptNumber || 'REC-0001',
+        date: new Date(booking.createdAt).toLocaleDateString(),
+        customerName: booking.customerName || customer?.name || '',
+        customerPhone: booking.customerPhone || customer?.phone || '',
+        customerEmail: booking.customerEmail || '',
+        customerAddress: booking.customerAddress || customer?.address || '',
+        customerVillage: booking.customerVillage || '',
+        customerTaluka: booking.customerTaluka || customer?.taluka || '',
+        customerDistrict: booking.customerDistrict || customer?.district || '',
+        mandalName: booking.mandalName || customer?.mandalName || '',
+        ganpatiName: booking.ganpati?.name || '',
+        ganpatiHeight: booking.ganpati?.height || '',
+        ganpatiPrice: booking.ganpati?.price || 0,
+        advancePayment: booking.advancePayment,
+        remainingPayment: booking.remainingPayment,
+        totalPrice: booking.totalPrice,
+        totalPaidSoFar: booking.totalPaidSoFar || 0,
+        bookingDate: booking.bookingDate || new Date().toISOString().split('T')[0],
+        status: booking.status,
+        contactNumbers: [],
+        paymentHistory: booking.paymentHistory?.map(p => ({
+          amount: p.amount || 0,
+          date: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString(),
+          type: p.paymentType || 'INSTALLMENT',
+          notes: p.notes || '',
+          remainingAfter: p.remainingAfterPayment || 0
+        })) || []
+      };
+
+      // Use frontend PDF generator (modern template)
+      await downloadReceiptPDF(receiptData);
       showSnackbar('success', 'PDF downloaded successfully');
-    } catch {
-      window.open(receipt.pdfPath, '_blank');
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+      showSnackbar('error', 'Failed to download PDF. Please try again.');
     } finally {
       setPdfLoading(false);
     }
@@ -206,6 +208,20 @@ export default function ReceiptView() {
     );
   }
 
+  if (!booking) {
+    return (
+      <OrangeBackground>
+        <Container maxWidth="md" sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" color="textSecondary">
+            Booking details not found.
+          </Typography>
+        </Container>
+      </OrangeBackground>
+    );
+  }
+
+  const customer = booking.customer;
+
   return (
     <OrangeBackground>
       <Helmet>
@@ -220,7 +236,7 @@ export default function ReceiptView() {
 
       <Container maxWidth="md">
         <GlassCard>
-          {/* Header with Logo & Greeting */}
+          {/* Header */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Avatar
               src="/Logo.avif"
@@ -250,11 +266,10 @@ export default function ReceiptView() {
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* Receipt Info – Minimal Token Display */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
             <Chip
               icon={<ReceiptIcon />}
-              label={`पावती क्रमांक: ${receipt?.bookingId?.substring(0, 8) || 'N/A'}`}
+              label={`पावती क्रमांक: ${booking.receiptNumber || 'N/A'}`}
               variant="outlined"
               sx={{ borderRadius: 20, borderColor: '#E65100', color: '#E65100' }}
             />
@@ -265,7 +280,6 @@ export default function ReceiptView() {
             />
           </Box>
 
-          {/* Success Message */}
           <Box sx={{ mb: 4, p: 2, bgcolor: alpha('#4caf50', 0.06), borderRadius: 16, border: `1px solid ${alpha('#4caf50', 0.2)}` }}>
             <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#2e7d32' }}>
               <CheckCircle fontSize="small" />
@@ -273,7 +287,7 @@ export default function ReceiptView() {
             </Typography>
           </Box>
 
-          {/* Booking Details Card */}
+          {/* Customer & Ganpati Info */}
           <Card sx={{ mb: 4, borderRadius: 16, boxShadow: 'none', border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
             <CardContent>
               <Grid container spacing={2}>
@@ -281,17 +295,17 @@ export default function ReceiptView() {
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Person fontSize="small" /> ग्राहक माहिती
                   </Typography>
-                  <InfoRow label="नाव" value={receipt?.bookingId ? 'Customer Name' : 'N/A'} icon={<Person sx={{ fontSize: 16 }} />} />
-                  <InfoRow label="मोबाईल" value="+91 9876543210" icon={<Phone sx={{ fontSize: 16 }} />} />
-                  <InfoRow label="पत्ता" value="Kurundwad, Maharashtra" icon={<LocationOn sx={{ fontSize: 16 }} />} />
+                  <InfoRow label="नाव" value={booking.customerName || customer?.name || 'N/A'} icon={<Person sx={{ fontSize: 16 }} />} />
+                  <InfoRow label="मोबाईल" value={booking.customerPhone || customer?.phone || 'N/A'} icon={<Phone sx={{ fontSize: 16 }} />} />
+                  <InfoRow label="पत्ता" value={booking.customerAddress || customer?.address || 'N/A'} icon={<LocationOn sx={{ fontSize: 16 }} />} />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Category fontSize="small" /> गणपती माहिती
                   </Typography>
-                  <InfoRow label="नाव" value="Ganpati Name" icon={<Category sx={{ fontSize: 16 }} />} />
-                  <InfoRow label="उंची" value="3 ft" icon={<Height sx={{ fontSize: 16 }} />} />
-                  <InfoRow label="किंमत" value="₹ 15,000" icon={<AttachMoney sx={{ fontSize: 16 }} />} />
+                  <InfoRow label="नाव" value={booking.ganpati?.name || 'N/A'} icon={<Category sx={{ fontSize: 16 }} />} />
+                  <InfoRow label="उंची" value={booking.ganpati?.height || 'N/A'} icon={<Height sx={{ fontSize: 16 }} />} />
+                  <InfoRow label="किंमत" value={`₹${booking.ganpati?.price?.toLocaleString() || 0}`} icon={<AttachMoney sx={{ fontSize: 16 }} />} />
                 </Grid>
               </Grid>
             </CardContent>
@@ -306,25 +320,42 @@ export default function ReceiptView() {
               <Grid size={{ xs: 4 }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="caption" color="textSecondary">एकूण</Typography>
-                  <Typography variant="h6" fontWeight={700} sx={{ color: '#E65100' }}>₹15,000</Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: '#E65100' }}>₹{booking.totalPrice?.toLocaleString() || 0}</Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 4 }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="caption" color="textSecondary">भरले</Typography>
-                  <Typography variant="h6" fontWeight={700} sx={{ color: '#2e7d32' }}>₹10,000</Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: '#2e7d32' }}>₹{booking.totalPaidSoFar?.toLocaleString() || 0}</Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 4 }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="caption" color="textSecondary">बाकी</Typography>
-                  <Typography variant="h6" fontWeight={700} sx={{ color: '#d32f2f' }}>₹5,000</Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: '#d32f2f' }}>₹{booking.remainingPayment?.toLocaleString() || 0}</Typography>
                 </Box>
               </Grid>
             </Grid>
           </Paper>
 
-          {/* Action Buttons */}
+          {/* Payment History (if any) */}
+          {booking.paymentHistory && booking.paymentHistory.length > 0 && (
+            <Paper sx={{ p: 2, mb: 4, borderRadius: 16, bgcolor: '#faf8f6' }}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#E65100', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <History fontSize="small" /> पेमेंट हिस्ट्री
+              </Typography>
+              {booking.paymentHistory.map((p, idx) => (
+                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5, borderBottom: '1px dashed #f0ebe6' }}>
+                  <Typography variant="body2">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A'}</Typography>
+                  <Typography variant="body2" fontWeight={600} color="#2e7d32">₹{p.amount?.toLocaleString() || 0}</Typography>
+                  <Typography variant="body2">{p.paymentType}</Typography>
+                  <Typography variant="body2" fontWeight={600} color="#d32f2f">₹{p.remainingAfterPayment?.toLocaleString() || 0}</Typography>
+                </Box>
+              ))}
+            </Paper>
+          )}
+
+          {/* Download Button */}
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3 }}>
             <Button
               fullWidth
@@ -345,24 +376,9 @@ export default function ReceiptView() {
             >
               {pdfLoading ? 'लोड होत आहे...' : '📄 डाउनलोड पावती'}
             </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<ReceiptIcon />}
-              onClick={handleViewPDF}
-              disabled={pdfLoading}
-              sx={{
-                borderRadius: 50,
-                py: 1.5,
-                borderColor: '#1976d2',
-                color: '#1976d2',
-                '&:hover': { borderColor: '#1565c0', background: alpha('#1976d2', 0.04) },
-              }}
-            >
-              {pdfLoading ? 'लोड होत आहे...' : '👁️ पहा पावती'}
-            </Button>
           </Box>
 
+          {/* WhatsApp Share */}
           <Button
             fullWidth
             variant="contained"
@@ -379,7 +395,7 @@ export default function ReceiptView() {
             WhatsApp वर शेअर करा
           </Button>
 
-          {/* Footer with Slogans */}
+          {/* Footer */}
           <Box sx={{ textAlign: 'center', mt: 2, pt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
             <Typography variant="body2" sx={{ color: '#b84a1a', fontWeight: 600 }}>
               🌺 गणपती बाप्पा मोरया • मंगलमूर्ती मोरया 🌺
