@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Box, Typography, Container, Paper, Button, LinearProgress,
-   Avatar, Divider, alpha, styled
+  Avatar, Divider, alpha, styled
 } from '@mui/material';
 import { Download, Receipt as ReceiptIcon } from '@mui/icons-material';
 import { config } from '@/constants/config';
 import { apiClient } from '@/services/api';
 import { Helmet } from 'react-helmet-async';
+import { showSnackbar } from '@/components/uncontrolled/ToastMessage';
 
 interface ReceiptResponse {
   token: string;
@@ -37,6 +38,7 @@ export default function ReceiptView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptResponse | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -64,9 +66,104 @@ export default function ReceiptView() {
     fetchReceipt();
   }, [token]);
 
-  const handleDownload = () => {
-    if (receipt?.pdfPath) {
-      window.open(receipt.pdfPath, '_blank');
+  const handleViewPDF = async () => {
+    if (!receipt?.pdfPath) {
+      showSnackbar('error', 'PDF not available');
+      return;
+    }
+
+    setPdfLoading(true);
+    try {
+      // For mobile: fetch blob and open with proper viewer
+      const response = await fetch(receipt.pdfPath);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch PDF');
+      }
+
+      const blob = await response.blob();
+      
+      // Check if it's actually a PDF
+      if (blob.type !== 'application/pdf') {
+        // If Cloudinary returns an HTML error page, try direct URL
+        window.open(receipt.pdfPath, '_blank');
+        setPdfLoading(false);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      
+      // Open in new tab
+      const newWindow = window.open(url, '_blank');
+      
+      // Revoke URL after 1 minute to free memory
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      
+      if (!newWindow) {
+        // If popup blocked, fallback to direct link
+        window.open(receipt.pdfPath, '_blank');
+      }
+    } catch (error) {
+      console.error('Failed to open PDF:', error);
+      // Fallback: open direct URL
+      try {
+        window.open(receipt.pdfPath, '_blank');
+      } catch  {
+        showSnackbar('error', 'Failed to open PDF. Please try downloading instead.');
+      }
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!receipt?.pdfPath) {
+      showSnackbar('error', 'PDF not available');
+      return;
+    }
+
+    setPdfLoading(true);
+    try {
+      // First try: fetch blob and download
+      const response = await fetch(receipt.pdfPath);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch PDF');
+      }
+
+      const blob = await response.blob();
+      
+      // Check if it's actually a PDF
+      if (blob.type !== 'application/pdf' || blob.size < 1000) {
+        // If Cloudinary returns an error page, fallback to direct download
+        window.open(receipt.pdfPath, '_blank');
+        setPdfLoading(false);
+        return;
+      }
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Receipt-${receipt.token.substring(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Revoke URL after download
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      
+      showSnackbar('success', 'PDF downloaded successfully');
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+      // Fallback: open direct URL
+      try {
+        window.open(receipt.pdfPath, '_blank');
+      } catch  {
+        showSnackbar('error', 'Failed to download PDF. Please try again.');
+      }
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -176,28 +273,36 @@ export default function ReceiptView() {
               fullWidth
               variant="contained"
               startIcon={<Download />}
-              onClick={handleDownload}
+              onClick={handleDownloadPDF}
+              disabled={pdfLoading}
               sx={{ 
                 background: 'linear-gradient(135deg, #E65100, #FF8F00)',
                 borderRadius: 50,
                 py: 1.5,
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 25px ${alpha('#E65100', 0.4)}`,
+                },
+                transition: 'all 0.3s ease',
               }}
             >
-              Download Receipt (PDF)
+              {pdfLoading ? 'Loading...' : 'Download Receipt (PDF)'}
             </Button>
 
             <Button
               fullWidth
               variant="contained"
-              startIcon={<Download />}
-              onClick={() => window.open(receipt?.pdfPath, '_blank')}
+              startIcon={<ReceiptIcon />}
+              onClick={handleViewPDF}
+              disabled={pdfLoading}
               sx={{ 
                 bgcolor: '#1976d2',
                 borderRadius: 50,
                 py: 1.5,
+                '&:hover': { bgcolor: '#1565c0' },
               }}
             >
-              View Receipt
+              {pdfLoading ? 'Loading...' : 'View Receipt'}
             </Button>
           </Box>
 
