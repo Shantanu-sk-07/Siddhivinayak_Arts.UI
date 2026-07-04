@@ -510,7 +510,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
             </TableHead>
 
             <TableBody>
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {loading ? (
                   <motion.tr
                     key="loading"

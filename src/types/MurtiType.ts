@@ -366,6 +366,27 @@ export interface PromoteFormData {
   notes: string;
 }
 
+export interface ShareCollectionResponse {
+  id: string;
+  token: string;
+  shareUrl: string;
+  createdBy: string;
+  createdDate: string;
+  expiryDate: string | null;
+  isActive: boolean;
+  ganpatiIds: string[];
+  customerIds: string[];
+}
+
+export interface ReceiptResponse {
+  id: string;
+  token: string;
+  receiptUrl: string;
+  bookingId: string;
+  pdfPath: string;
+  createdDate: string;
+  isActive: boolean;
+}
 
 
 // ==================== Ganpati Management Types ====================

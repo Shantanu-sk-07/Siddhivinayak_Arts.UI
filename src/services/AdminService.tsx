@@ -7,7 +7,9 @@ import {
   ConfirmedBooking, 
   ConfirmedBookingRequest,
   CustomerFormData,
-  RegistrationType
+  RegistrationType,
+  ShareCollectionResponse,
+  ReceiptResponse
 } from '@/types/MurtiType';
 
 export const adminService = {
@@ -195,52 +197,26 @@ export const adminService = {
     });
   },
 
-  async createShareCollection(data: { customerIds: string[], ganpatiIds: string[], expiryDays?: number }): Promise<ApiResponse<{
-  id: string;
-  token: string;
-  shareUrl: string;
-  createdBy: string;
-  createdDate: string;
-  expiryDate: string | null;
-  isActive: boolean;
-  ganpatiIds: string[];
-  customerIds: string[];
-}>> {
-  const adminId = localStorage.getItem('userId') || '';
-  return apiClient<ApiResponse<{
-    id: string;
-    token: string;
-    shareUrl: string;
-    createdBy: string;
-    createdDate: string;
-    expiryDate: string | null;
-    isActive: boolean;
-    ganpatiIds: string[];
-    customerIds: string[];
-  }>>(`/share/collection?adminId=${adminId}`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-},
-  async generateReceipt(bookingId: string): Promise<ApiResponse<{
-    id: string;
-    token: string;
-    receiptUrl: string;
-    bookingId: string;
-    pdfPath: string;
-    createdDate: string;
-    isActive: boolean;
-  }>> {
-    return apiClient<ApiResponse<{
-      id: string;
-      token: string;
-      receiptUrl: string;
-      bookingId: string;
-      pdfPath: string;
-      createdDate: string;
-      isActive: boolean;
-    }>>(`/admin/bookings/${bookingId}/generate-receipt`, {
+  async createShareCollection(data: { customerIds: string[], ganpatiIds: string[], expiryDays?: number }): Promise<ApiResponse<ShareCollectionResponse>> {
+    const adminId = localStorage.getItem('userId') || '';
+    return apiClient<ApiResponse<ShareCollectionResponse>>(`/share/collection?adminId=${adminId}`, {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // FIXED: correct backend path is /api/receipt/generate/{bookingId} (see ReceiptController.java)
+  async generateReceipt(bookingId: string): Promise<ApiResponse<ReceiptResponse>> {
+    return apiClient<ApiResponse<ReceiptResponse>>(`/receipt/generate/${bookingId}`, {
+      method: 'POST',
+    });
+  },
+
+  // FIXED: public endpoint, no auth needed, matches ReceiptController's GET /{token}
+  async getReceiptByToken(token: string): Promise<ApiResponse<ReceiptResponse>> {
+    return apiClient<ApiResponse<ReceiptResponse>>(`/receipt/${token}`, {
+      method: 'GET',
+      skipAuth: true,
     });
   },
 
