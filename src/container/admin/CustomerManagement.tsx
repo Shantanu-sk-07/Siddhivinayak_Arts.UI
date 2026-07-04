@@ -4,15 +4,14 @@ import {
   Chip, Dialog, DialogTitle, DialogContent, DialogActions,
   Grid, IconButton, Tooltip, Avatar, LinearProgress, Tabs, Tab,
   FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText,
-  TextField
-} from '@mui/material';
+  TextField} from '@mui/material';
 import { 
   Close as CloseIcon, 
   ArrowUpward as PromoteIcon, 
   Edit as EditIcon, Delete as DeleteIcon,
   Person as PersonIcon, Phone as PhoneIcon, 
   LocationOn as LocationOnIcon, Category as CategoryIcon,
-  Share as ShareIcon
+  Share as ShareIcon, Send as SendIcon, CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -81,6 +80,13 @@ export default function CustomerManagement() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareGanpatiIds, setShareGanpatiIds] = useState<string[]>([]);
   const [expiryDays, setExpiryDays] = useState<number>(7);
+
+  // Multi-send state
+  const [sendQueue, setSendQueue] = useState<{ id: string; phone: string; name: string }[]>([]);
+  const [currentSendIndex, setCurrentSendIndex] = useState<number>(0);
+  const [sendProgressOpen, setSendProgressOpen] = useState<boolean>(false);
+  const [sendMessage, setSendMessage] = useState<string>('');
+  const [, setSendLink] = useState<string>('');
 
   const methods = useForm<PromoteFormData>({
     defaultValues: {
@@ -347,6 +353,76 @@ export default function CustomerManagement() {
     ganpatiImage: customer.ganpatiImage,
     createdAt: customer.createdAt,
   }));
+
+  // === Multi-send logic ===
+  const handleSendAll = async () => {
+    try {
+      const response = await adminService.createShareCollection({
+        customerIds: selectedCustomerIds,
+        ganpatiIds: shareGanpatiIds,
+        expiryDays: expiryDays > 0 ? expiryDays : undefined,
+      });
+      if (!response.success) {
+        showSnackbar('error', response.message || 'Failed to create share link');
+        return;
+      }
+
+      let shareUrl = response.data.shareUrl;
+      if (!shareUrl.startsWith('http://') && !shareUrl.startsWith('https://')) {
+        shareUrl = `https://${shareUrl}`;
+      }
+
+      const selectedCustomers = customers.filter(c => selectedCustomerIds.includes(c.id));
+      const queue = selectedCustomers
+        .map(c => ({ id: c.id, phone: c.phone, name: c.name }))
+        .filter(item => item.phone && item.phone.length > 0);
+
+      if (queue.length === 0) {
+        showSnackbar('warning', 'No phone numbers found for selected customers');
+        return;
+      }
+
+      setSendQueue(queue);
+      setCurrentSendIndex(0);
+      setSendLink(shareUrl);
+      const msg = `Namaste 🙏\n\nYour selected Ganpati collection is ready.\n\nClick below to view.\n${shareUrl}`;
+      setSendMessage(msg);
+      setSendProgressOpen(true);
+    } catch (error) {
+      console.error('Error creating share collection:', error);
+      showSnackbar('error', 'Failed to create share link');
+    }
+  };
+
+  const handleSendNext = () => {
+    if (currentSendIndex >= sendQueue.length) {
+      setSendProgressOpen(false);
+      setSendQueue([]);
+      setCurrentSendIndex(0);
+      showSnackbar('success', 'All messages sent!');
+      return;
+    }
+
+    const customer = sendQueue[currentSendIndex];
+    const encoded = encodeURIComponent(sendMessage);
+    window.open(`https://wa.me/${customer.phone}?text=${encoded}`, '_blank');
+
+    // Move to next after a short delay to allow tab to open
+    setTimeout(() => {
+      setCurrentSendIndex(prev => prev + 1);
+    }, 500);
+  };
+
+  const handleSendAllAtOnce = () => {
+    sendQueue.forEach(customer => {
+      const encoded = encodeURIComponent(sendMessage);
+      window.open(`https://wa.me/${customer.phone}?text=${encoded}`, '_blank');
+    });
+    showSnackbar('info', `Opened ${sendQueue.length} WhatsApp tabs. Please allow pop-ups.`);
+    setSendProgressOpen(false);
+    setSendQueue([]);
+    setCurrentSendIndex(0);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -808,6 +884,7 @@ export default function CustomerManagement() {
         </DialogActions>
       </Dialog>
 
+      {/* Share Dialog */}
       <Dialog
         open={shareDialogOpen}
         onClose={() => setShareDialogOpen(false)}
@@ -825,7 +902,6 @@ export default function CustomerManagement() {
             Selected Customers: {selectedCustomerIds.length}
           </Typography>
           
-          {/* Optional: Show phone numbers of selected customers */}
           <Box sx={{ mt: 1, mb: 2 }}>
             <Typography variant="caption" color="textSecondary" display="block">
               Phone numbers: 
@@ -904,50 +980,94 @@ export default function CustomerManagement() {
           </Button>
           <Button
             variant="contained"
-            onClick={async () => {
-              try {
-                const response = await adminService.createShareCollection({
-                  customerIds: selectedCustomerIds,
-                  ganpatiIds: shareGanpatiIds,
-                  expiryDays: expiryDays > 0 ? expiryDays : undefined,
-                });
-                if (response.success) {
-                  let shareUrl = response.data.shareUrl;
-                  if (!shareUrl.startsWith('http://') && !shareUrl.startsWith('https://')) {
-                    shareUrl = `https://${shareUrl}`;
-                  }
-                  
-                  const selectedCustomers = customers.filter(c => selectedCustomerIds.includes(c.id));
-                  const phoneNumbers = selectedCustomers.map(c => c.phone).filter(p => p && p.length > 0);
-                  
-                  if (phoneNumbers.length === 0) {
-                    showSnackbar('warning', 'No phone numbers found for selected customers');
-                    return;
-                  }
-
-                  const message = `Namaste 🙏\n\nYour selected Ganpati collection is ready.\n\nClick below to view.\n${shareUrl}`;
-                  const encoded = encodeURIComponent(message);
-
-                  phoneNumbers.forEach(phone => {
-                    window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
-                  });
-
-                  showSnackbar('success', `WhatsApp links opened for ${phoneNumbers.length} customers`);
-                  setShareDialogOpen(false);
-                  setSelectedCustomerIds([]);
-                  setShareGanpatiIds([]);
-                } else {
-                  showSnackbar('error', response.message || 'Failed to create share link');
-                }
-              } catch {
-                showSnackbar('error', 'Failed to create share link');
-              }
-            }}
+            onClick={handleSendAll}
             disabled={shareGanpatiIds.length === 0}
             sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#128C7E' } }}
           >
             Generate & Send WhatsApp
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Send Progress Dialog */}
+      <Dialog
+        open={sendProgressOpen}
+        onClose={() => {}}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ bgcolor: '#25D366', color: 'white' }}>
+          Sending WhatsApp Messages
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="textSecondary">
+              Progress: {currentSendIndex} / {sendQueue.length}
+            </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={(currentSendIndex / sendQueue.length) * 100} 
+              sx={{ mt: 1, height: 8, borderRadius: 4 }}
+            />
+          </Box>
+
+          {currentSendIndex < sendQueue.length && (
+            <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2, mb: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600}>
+                Current Customer:
+              </Typography>
+              <Typography variant="body1">
+                {sendQueue[currentSendIndex]?.name} ({sendQueue[currentSendIndex]?.phone})
+              </Typography>
+            </Box>
+          )}
+
+          {currentSendIndex >= sendQueue.length && (
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <CheckCircleIcon sx={{ fontSize: 60, color: '#4caf50' }} />
+              <Typography variant="h6" sx={{ mt: 1 }}>
+                All messages sent!
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0, gap: 1, flexWrap: 'wrap' }}>
+          {currentSendIndex < sendQueue.length && (
+            <>
+              <Button
+                variant="contained"
+                startIcon={<SendIcon />}
+                onClick={handleSendNext}
+                sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#128C7E' } }}
+              >
+                Send to This Customer
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleSendAllAtOnce}
+                sx={{ borderColor: '#1976d2', color: '#1976d2' }}
+              >
+                Send All at Once
+              </Button>
+            </>
+          )}
+          {currentSendIndex >= sendQueue.length && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setSendProgressOpen(false);
+                setSendQueue([]);
+                setCurrentSendIndex(0);
+                setShareDialogOpen(false);
+                setSelectedCustomerIds([]);
+                setShareGanpatiIds([]);
+              }}
+              sx={{ bgcolor: '#1976d2' }}
+            >
+              Done
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </motion.div>
