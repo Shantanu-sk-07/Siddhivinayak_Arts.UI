@@ -309,7 +309,15 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
         } else {
           const errorMessage = response.message?.toLowerCase() || '';
           
-          if (errorMessage.includes('alternate phone') || errorMessage.includes('alternate phone cannot be same')) {
+          if (errorMessage.includes('alternate mobile number already exists') || 
+              errorMessage.includes('alternate phone already exists') ||
+              errorMessage.includes('alternate phone') && errorMessage.includes('already exists')) {
+            setError('alternatePhone', {
+              type: 'manual',
+              message: t('validation.alternate_phone_exists', 'Alternate mobile number already exists')
+            });
+            showSnackbar('warning', t('validation.alternate_phone_exists', 'Alternate mobile number already exists'));
+          } else if (errorMessage.includes('alternate phone cannot be same')) {
             setError('alternatePhone', {
               type: 'manual',
               message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
@@ -346,7 +354,15 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
         } else {
           const errorMessage = response.message?.toLowerCase() || '';
           
-          if (errorMessage.includes('alternate phone') || errorMessage.includes('alternate phone cannot be same')) {
+          if (errorMessage.includes('alternate mobile number already exists') || 
+              errorMessage.includes('alternate phone already exists') ||
+              errorMessage.includes('alternate phone') && errorMessage.includes('already exists')) {
+            setError('alternatePhone', {
+              type: 'manual',
+              message: t('validation.alternate_phone_exists', 'Alternate mobile number already exists')
+            });
+            showSnackbar('warning', t('validation.alternate_phone_exists', 'Alternate mobile number already exists'));
+          } else if (errorMessage.includes('alternate phone cannot be same')) {
             setError('alternatePhone', {
               type: 'manual',
               message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
@@ -368,7 +384,15 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
       const msg = error instanceof Error ? error.message : '';
       const errorMessage = msg.toLowerCase();
       
-      if (errorMessage.includes('alternate phone') || errorMessage.includes('alternate phone cannot be same')) {
+      if (errorMessage.includes('alternate mobile number already exists') || 
+          errorMessage.includes('alternate phone already exists') ||
+          errorMessage.includes('alternate phone') && errorMessage.includes('already exists')) {
+        setError('alternatePhone', {
+          type: 'manual',
+          message: t('validation.alternate_phone_exists', 'Alternate mobile number already exists')
+        });
+        showSnackbar('warning', t('validation.alternate_phone_exists', 'Alternate mobile number already exists'));
+      } else if (errorMessage.includes('alternate phone cannot be same')) {
         setError('alternatePhone', {
           type: 'manual',
           message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
