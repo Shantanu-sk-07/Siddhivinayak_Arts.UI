@@ -357,6 +357,7 @@
     "delete_confirm": "Are you sure? This action cannot be undone"
   },
   "validation": {
+     "alternate_phone_same": "Alternate phone cannot be same as main phone",
     "phone_exists": "Mobile number already exists",
     "required": "This field is required",
     "invalid_email": "Please enter a valid email address",

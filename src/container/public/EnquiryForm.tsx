@@ -161,6 +161,19 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
   const { watch, reset, handleSubmit, setValue, setError, clearErrors } = methods;
   const selectedDistrict = watch('district');
   const talukaOptions = useMemo(() => getTalukaOptions(selectedDistrict), [selectedDistrict]);
+  const phone = watch('phone');
+  const alternatePhone = watch('alternatePhone');
+
+  useEffect(() => {
+    if (alternatePhone && phone && alternatePhone === phone) {
+      setError('alternatePhone', {
+        type: 'manual',
+        message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
+      });
+    } else {
+      clearErrors('alternatePhone');
+    }
+  }, [phone, alternatePhone, setError, clearErrors, t]);
 
   useEffect(() => {
     if (open && !isInitialized.current) {
@@ -241,109 +254,135 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     }
   };
 
-  const onSubmit: SubmitHandler<EnquiryFormValues> = async (data) => {
-    setSubmitting(true);
-    clearErrors('phone');
+const onSubmit: SubmitHandler<EnquiryFormValues> = async (data) => {
+  setSubmitting(true);
+  clearErrors('phone');
+  clearErrors('alternatePhone');
 
-    try {
-      if (isEnquiryMode && selectedGanpati) {
-        const response = await enquiryService.submitEnquiry({
-          ...data,
-          ganpatiId: selectedGanpati.id,
-          registrationType: data.registrationType
-        });
+  if (data.alternatePhone && data.phone && data.alternatePhone === data.phone) {
+    setError('alternatePhone', {
+      type: 'manual',
+      message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
+    });
+    showSnackbar('warning', t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone'));
+    setSubmitting(false);
+    return;
+  }
 
-        if (response.success) {
-          // Check if the backend indicates the phone already exists
-          const phoneExists = response.message?.toLowerCase().includes('आधीच') || 
-                              response.message?.toLowerCase().includes('already exists') ||
-                              response.message?.toLowerCase().includes('already registered');
-          
-          if (phoneExists) {
-            // Existing phone – show warning, keep dialog open, set field error
-            setError('phone', { 
-              type: 'manual', 
-              message: t('validation.phone_exists', 'Mobile number already exists') 
-            });
-            showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
-            setSubmitting(false);
-            return;
-          }
+  try {
+    if (isEnquiryMode && selectedGanpati) {
+      const response = await enquiryService.submitEnquiry({
+        ...data,
+        ganpatiId: selectedGanpati.id,
+        registrationType: data.registrationType
+      });
 
-          showSnackbar('success', t('enquiry.success'));
-          
-          const message = generateEnquiryMessage(
-            selectedGanpati.name,
-            selectedGanpati.height,
-            selectedGanpati.price,
-            data.name,
-            data.phone,
-            `${t('enquiry.type')}: ${data.registrationType === 'HOME' ? t('enquiry.home_ganpati') : t('enquiry.mandal_ganpati')}`
-          );
-          
-          sendWhatsAppMessage(config.ADMIN_WHATSAPP, message);
-          handleClose();
-          if (onSuccess) onSuccess();
-        } else {
-          if (response.message?.toLowerCase().includes('phone') || 
-              response.message?.toLowerCase().includes('already exists')) {
-            setError('phone', { 
-              type: 'manual', 
-              message: t('validation.phone_exists', 'Mobile number already exists') 
-            });
-            showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
-          } else {
-            showSnackbar('error', response.message || t('msg.error'));
-          }
-        }
-      } else if (isCustomerMode) {
-        const payload = {
-          ...data,
-          ganpatiId: selectedGanpati?.id || '',
-          registrationType: data.registrationType
-        };
+      if (response.success) {
+        const phoneExists = response.message?.toLowerCase().includes('आधीच') ||
+                            response.message?.toLowerCase().includes('already exists') ||
+                            response.message?.toLowerCase().includes('already registered');
 
-        let response;
-        if (editingCustomer) {
-          response = await enquiryService.updateCustomer(editingCustomer.id, payload);
-        } else {
-          response = await enquiryService.createCustomer(payload);
+        if (phoneExists) {
+          setError('phone', {
+            type: 'manual',
+            message: t('validation.phone_exists', 'Mobile number already exists')
+          });
+          showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+          setSubmitting(false);
+          return;
         }
 
-        if (response.success) {
-          // For admin customer mode, treat existing phone as success (idempotent)
-          showSnackbar('success', editingCustomer ? t('customer.update_success') : t('customer.register_success'));
-          handleClose();
-          if (onSuccess) onSuccess();
-        } else {
-          if (response.message?.toLowerCase().includes('phone') || 
-              response.message?.toLowerCase().includes('already exists')) {
-            setError('phone', { 
-              type: 'manual', 
-              message: t('validation.phone_exists', 'Mobile number already exists') 
-            });
-            showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
-          } else {
-            showSnackbar('error', response.message || t('msg.error'));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Form submission error:', error);
-      const msg = error instanceof Error ? error.message : '';
-      if (msg.toLowerCase().includes('phone') || msg.toLowerCase().includes('already exists')) {
-        setError('phone', { 
-          type: 'manual', 
-          message: t('validation.phone_exists', 'Mobile number already exists') 
-        });
-        showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+        showSnackbar('success', t('enquiry.success'));
+
+        const message = generateEnquiryMessage(
+          selectedGanpati.name,
+          selectedGanpati.height,
+          selectedGanpati.price,
+          data.name,
+          data.phone,
+          `${t('enquiry.type')}: ${data.registrationType === 'HOME' ? t('enquiry.home_ganpati') : t('enquiry.mandal_ganpati')}`
+        );
+
+        sendWhatsAppMessage(config.ADMIN_WHATSAPP, message);
+        handleClose();
+        if (onSuccess) onSuccess();
       } else {
-        showSnackbar('error', t('msg.error'));
+        if (response.message?.toLowerCase().includes('phone') ||
+            response.message?.toLowerCase().includes('already exists')) {
+          setError('phone', {
+            type: 'manual',
+            message: t('validation.phone_exists', 'Mobile number already exists')
+          });
+          showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+        } else if (response.message?.toLowerCase().includes('alternate phone')) {
+          setError('alternatePhone', {
+            type: 'manual',
+            message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
+          });
+          showSnackbar('warning', t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone'));
+        } else {
+          showSnackbar('error', response.message || t('msg.error'));
+        }
       }
-    } finally {
-      setSubmitting(false);
+    } else if (isCustomerMode) {
+      const payload = {
+        ...data,
+        ganpatiId: selectedGanpati?.id || '',
+        registrationType: data.registrationType
+      };
+
+      let response;
+      if (editingCustomer) {
+        response = await enquiryService.updateCustomer(editingCustomer.id, payload);
+      } else {
+        response = await enquiryService.createCustomer(payload);
+      }
+
+      if (response.success) {
+        showSnackbar('success', editingCustomer ? t('customer.update_success') : t('customer.register_success'));
+        handleClose();
+        if (onSuccess) onSuccess();
+      } else {
+        if (response.message?.toLowerCase().includes('phone') ||
+            response.message?.toLowerCase().includes('already exists')) {
+          setError('phone', {
+            type: 'manual',
+            message: t('validation.phone_exists', 'Mobile number already exists')
+          });
+          showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+        } else if (response.message?.toLowerCase().includes('alternate phone')) {
+          setError('alternatePhone', {
+            type: 'manual',
+            message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
+          });
+          showSnackbar('warning', t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone'));
+        } else {
+          showSnackbar('error', response.message || t('msg.error'));
+        }
+      }
     }
-  };
+  } catch (error) {
+    console.error('Form submission error:', error);
+    const msg = error instanceof Error ? error.message : '';
+    if (msg.toLowerCase().includes('phone') || msg.toLowerCase().includes('already exists')) {
+      setError('phone', {
+        type: 'manual',
+        message: t('validation.phone_exists', 'Mobile number already exists')
+      });
+      showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+    } else if (msg.toLowerCase().includes('alternate phone')) {
+      setError('alternatePhone', {
+        type: 'manual',
+        message: t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone')
+      });
+      showSnackbar('warning', t('validation.alternate_phone_same', 'Alternate phone cannot be same as main phone'));
+    } else {
+      showSnackbar('error', t('msg.error'));
+    }
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const getTitle = (): string => {
     if (isCustomerMode) {

@@ -52,7 +52,7 @@ export default function WebsiteLayout() {
   const [sloganIdx, setSloganIdx] = useState(0);
   const currentYear = new Date().getFullYear();
 
-  const slogans = ["गणपती बाप्पा मोरया 🐘", "मंगलमूर्ती मोरया 🌺", "ॐ गं गणपतये नमः 🙏", "विघ्नहर्ता गणेश ✨"];
+  const slogans = ["🌺 गणपती बाप्पा मोरया", "🌺 मंगलमूर्ती मोरया", "🌺 ॐ गं गणपतये नमः", "🌺 विघ्नहर्ता गणेश"];
 
   useEffect(() => {
     const t = setInterval(() => setSloganIdx(i => (i + 1) % slogans.length), 2800);
@@ -77,14 +77,18 @@ export default function WebsiteLayout() {
   return (
     <Box sx={{ minHeight: "100vh", background: P.bg, display: "flex", flexDirection: "column" }}>
 
-      {/* Topbar slogan ticker */}
-      <Box sx={{ background: P.grad, py: 0.5, overflow: "hidden" }}>
-        <AnimatePresence>
-          <motion.div key={sloganIdx}
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+      {/* Topbar slogan ticker - fixed height to prevent jumping */}
+      <Box sx={{ background: P.grad, height: 28, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={sloganIdx}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.4 }}
-            style={{ textAlign: "center" }}>
-            <Typography sx={{ fontSize: "0.72rem", fontWeight: 600, color: "white", letterSpacing: 1 }}>
+            style={{ display: "flex", alignItems: "center", height: "100%" }}
+          >
+            <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "white", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
               {slogans[sloganIdx]}
             </Typography>
           </motion.div>
@@ -119,7 +123,7 @@ export default function WebsiteLayout() {
                   Siddhivinayak <GradientText>Arts</GradientText>
                 </Typography>
                 <Typography sx={{ fontSize: "0.6rem", color: P.sub, letterSpacing: 0.5 }}>
-                  Ganesh Murti Specialist · Pune
+                  Ganesh Murti Specialist · Kurundwad
                 </Typography>
               </Box>
             </Box>
@@ -235,7 +239,7 @@ export default function WebsiteLayout() {
                 <Box sx={{ width: 40, height: 40, borderRadius: 2, background: P.grad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🐘</Box>
                 <Box>
                   <Typography sx={{ fontWeight: 800, color: "white", fontSize: "1rem" }}>Siddhivinayak Arts</Typography>
-                  <Typography sx={{ fontSize: "0.7rem", color: alpha("#fff", 0.45), letterSpacing: 0.5 }}>Pune, Maharashtra</Typography>
+                  <Typography sx={{ fontSize: "0.7rem", color: alpha("#fff", 0.45), letterSpacing: 0.5 }}>Kurundwad, Maharashtra</Typography>
                 </Box>
               </Box>
               <Typography sx={{ color: alpha("#fff", 0.6), fontSize: "0.85rem", lineHeight: 1.8, mb: 2.5 }}>
@@ -305,9 +309,10 @@ export default function WebsiteLayout() {
               </Typography>
               <Box sx={{ borderRadius: 3, overflow: "hidden", border: `1px solid ${alpha("#fff", 0.1)}`, height: 170 }}>
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3782.6789!2d73.8567!3d18.5204!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTjCsDMxJzEzLjUiTiA3M8KwNTEnMjQuMCJF!5e0!3m2!1sen!2sin!4v1234567890"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d29877.876456456456!2d74.5984!3d16.8024!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTbCsDQ4JzA4LjYiTiA3NMKwMzUnNTQuMyJF!5e0!3m2!1sen!2sin!4v1234567890"
                   width="100%" height="100%" style={{ border: "none" }}
                   allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+                  title="Siddhivinayak Arts Location"
                 />
               </Box>
             </Grid>
