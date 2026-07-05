@@ -56,8 +56,9 @@ export default function GanpatiShareView() {
 
     const fetchSharedGanpati = async () => {
       try {
-        // Fetch the collection data
-        const collectionRes = await apiClient<{ data: ShareCollectionResponse }>(`/share/collection/${token}`);
+        const collectionRes = await apiClient<{ data: ShareCollectionResponse }>(`/share/collection/${token}`, {
+          skipAuth: true
+        });
         if (!collectionRes.data) {
           setError('Invalid or expired link');
           setLoading(false);
@@ -66,7 +67,6 @@ export default function GanpatiShareView() {
 
         setCollection(collectionRes.data);
 
-        // Fetch all Ganpati and filter by IDs from collection
         const ganpatiRes = await apiClient<{ data: GanpatiResponseDto[] }>('/ganpati/all');
         if (ganpatiRes.data) {
           const filtered = ganpatiRes.data.filter(g => 
