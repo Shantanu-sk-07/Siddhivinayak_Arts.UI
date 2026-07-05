@@ -3,14 +3,16 @@ import {
   Box, Typography, Paper, Button, useTheme, alpha, styled,
   Chip, Dialog, DialogTitle, DialogContent, DialogActions,
   Grid, IconButton, Tooltip, Avatar, LinearProgress, Tabs, Tab,
-  FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText} from '@mui/material';
+  Checkbox, Autocomplete, TextField, CircularProgress, useMediaQuery
+} from '@mui/material';
 import { 
   Close as CloseIcon, 
   ArrowUpward as PromoteIcon, 
   Edit as EditIcon, Delete as DeleteIcon,
   Person as PersonIcon, Phone as PhoneIcon, 
   LocationOn as LocationOnIcon, Category as CategoryIcon,
-  Share as ShareIcon} from '@mui/icons-material';
+  Share as ShareIcon
+} from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -47,6 +49,7 @@ const MAX_AMOUNT = 10000000;
 export default function CustomerManagement() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [customers, setCustomers] = useState<User[]>([]);
   const [ganpatiList, setGanpatiList] = useState<GanpatiResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,7 @@ export default function CustomerManagement() {
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareGanpatiIds, setShareGanpatiIds] = useState<string[]>([]);
+  const [sharing, setSharing] = useState(false);
 
   const methods = useForm<PromoteFormData>({
     defaultValues: { ganpatiId: '', totalPrice: 0, advancePayment: 0, remainingPayment: 0, bookingDate: new Date().toISOString().split('T')[0], notes: '' }
@@ -193,28 +197,60 @@ export default function CustomerManagement() {
     createdAt: c.createdAt,
   }));
 
-  // Share functionality
   const handleShare = async () => {
+    const confirm = await showConfirmation(
+      `Send Ganpati collection to ${selectedCustomerIds.length} selected customers?`,
+      'Confirm Send'
+    );
+    if (!confirm) return;
+
     try {
+      setSharing(true);
       const res = await adminService.createShareCollection({
         customerIds: selectedCustomerIds,
         ganpatiIds: shareGanpatiIds,
-        expiryDays: undefined // removed expiry
+        expiryDays: undefined
       });
-      if (!res.success) { showSnackbar('error', res.message || 'Failed to create share link'); return; }
+      if (!res.success) {
+        showSnackbar('error', res.message || 'Failed to create share link');
+        setSharing(false);
+        return;
+      }
       let shareUrl = res.data.shareUrl;
       if (!shareUrl.startsWith('http://') && !shareUrl.startsWith('https://')) shareUrl = `https://${shareUrl}`;
+
       const selectedCustomers = customers.filter(c => selectedCustomerIds.includes(c.id));
       const phoneNumbers = selectedCustomers.map(c => c.phone).filter(p => p && p.length > 0);
-      if (phoneNumbers.length === 0) { showSnackbar('warning', 'No phone numbers found'); return; }
+      if (phoneNumbers.length === 0) {
+        showSnackbar('warning', 'No phone numbers found');
+        setSharing(false);
+        return;
+      }
+
       const message = `Namaste 🙏\n\nYour selected Ganpati collection is ready.\n\nClick below to view.\n${shareUrl}`;
       const encoded = encodeURIComponent(message);
-      phoneNumbers.forEach(phone => window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank'));
-      showSnackbar('success', `WhatsApp links opened for ${phoneNumbers.length} customers`);
+
+      let opened = 0;
+      for (let i = 0; i < phoneNumbers.length; i++) {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            window.open(`https://wa.me/${phoneNumbers[i]}?text=${encoded}`, '_blank');
+            opened++;
+            resolve();
+          }, i * 500);
+        });
+      }
+
+      showSnackbar('success', `WhatsApp links opened for ${opened} customers`);
       setShareDialogOpen(false);
       setSelectedCustomerIds([]);
       setShareGanpatiIds([]);
-    } catch { showSnackbar('error', 'Failed to create share link'); }
+    } catch (error) {
+      console.error('Share error:', error);
+      showSnackbar('error', 'Failed to create share link');
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -224,8 +260,14 @@ export default function CustomerManagement() {
           <Typography variant="h4" sx={{ fontWeight: 700, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             {t('admin.customers')}
           </Typography>
-          <Button variant="contained" startIcon={<ShareIcon />} disabled={selectedCustomerIds.length === 0} onClick={() => setShareDialogOpen(true)} sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#128C7E' }, borderRadius: 3 }}>
-            Send Ganpati ({selectedCustomerIds.length})
+          <Button
+            variant="contained"
+            startIcon={<ShareIcon />}
+            disabled={selectedCustomerIds.length === 0 || sharing}
+            onClick={() => setShareDialogOpen(true)}
+            sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#128C7E' }, borderRadius: 3 }}
+          >
+            {sharing ? 'Sending...' : `Send Ganpati (${selectedCustomerIds.length})`}
           </Button>
         </Box>
 
@@ -370,48 +412,144 @@ export default function CustomerManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Share Dialog */}
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
-        <DialogTitle sx={{ bgcolor: '#25D366', color: 'white' }}>
-          <Box display="flex" alignItems="center" gap={1}><ShareIcon /><Typography variant="h6">Send Ganpati Collection</Typography></Box>
+      {/* Share Dialog - Enhanced with Autocomplete */}
+      <Dialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 4 },
+            overflow: 'hidden',
+            margin: { xs: 0, sm: 'auto' },
+            maxHeight: { xs: '100vh', sm: '90vh' },
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: '#25D366', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, px: 3 }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <ShareIcon />
+            <Typography variant="h6" fontWeight={700}>Send Ganpati Collection</Typography>
+          </Box>
+          <IconButton onClick={() => setShareDialogOpen(false)} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="subtitle2" gutterBottom>Selected Customers: {selectedCustomerIds.length}</Typography>
-          <Box sx={{ mt: 1, mb: 2 }}>
-            <Typography variant="caption" color="textSecondary" display="block">
-              Numbers: {selectedCustomerIds.map(id => customers.find(c => c.id === id)?.phone).filter(Boolean).join(', ') || 'None'}
+
+        <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6' }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Selected Customers: <Chip label={selectedCustomerIds.length} size="small" color="primary" />
             </Typography>
+            <Box sx={{ mt: 1, mb: 2, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
+              <Typography variant="caption" color="textSecondary" display="block">
+                Numbers: {selectedCustomerIds.map(id => customers.find(c => c.id === id)?.phone).filter(Boolean).join(', ') || 'None'}
+              </Typography>
+            </Box>
           </Box>
 
-          <Typography variant="subtitle2" gutterBottom>Select Ganpati to Share:</Typography>
-          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-            <InputLabel>Ganpati</InputLabel>
-            <Select
-              multiple
-              value={shareGanpatiIds}
-              onChange={(e) => setShareGanpatiIds(e.target.value as string[])}
-              label="Ganpati"
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => {
-                    const g = ganpatiList.find(item => item.id === value);
-                    return <Chip key={value} avatar={g?.images?.[0] ? <Avatar src={g.images[0]} sx={{ width: 20, height: 20 }} /> : undefined} label={g?.name || value} size="small" />;
-                  })}
-                </Box>
-              )}
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+            Select Ganpati to Share:
+          </Typography>
+
+          <Autocomplete
+            multiple
+            options={ganpatiList}
+            getOptionLabel={(option) => `${option.name} (${option.height}) - ₹${option.price.toLocaleString()}`}
+            value={ganpatiList.filter(g => shareGanpatiIds.includes(g.id))}
+            onChange={(_, newValue) => {
+              setShareGanpatiIds(newValue.map(g => g.id));
+            }}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            disableCloseOnSelect
+            filterSelectedOptions
+           renderOption={(props, option, { selected }) => (
+  <li {...props} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>
+    <Checkbox checked={selected} size="small" sx={{ padding: '2px' }} />
+    <Box display="flex" alignItems="center" gap={1}>
+      {option.images?.[0] && <Avatar src={option.images[0]} sx={{ width: 24, height: 24, borderRadius: 1 }} />}
+      <Box>
+        <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.8rem' }}>{option.name}</Typography>
+        <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+          {option.height} • ₹{option.price.toLocaleString()}
+        </Typography>
+      </Box>
+    </Box>
+  </li>
+)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search Ganpati..."
+                variant="outlined"
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    bgcolor: 'white',
+                  }
+                }}
+              />
+            )}
+            ListboxProps={{
+              style: {
+                maxHeight: 280,
+                overflow: 'auto',
+                fontSize: '0.8rem',
+              },
+              sx: {
+                '& .MuiAutocomplete-option': {
+                  minHeight: 36,
+                  padding: '4px 8px',
+                }
+              }
+            }}
+            noOptionsText="No Ganpati found"
+            loadingText="Loading..."
+            fullWidth
+          />
+
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="caption" color="textSecondary">
+              Selected: {shareGanpatiIds.length} Ganpati
+            </Typography>
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => setShareGanpatiIds([])}
+              disabled={shareGanpatiIds.length === 0}
             >
-              {ganpatiList.map((g) => (
-                <MenuItem key={g.id} value={g.id}>
-                  <Checkbox checked={shareGanpatiIds.indexOf(g.id) > -1} />
-                  <ListItemText primary={`${g.name} (${g.height}) - ₹${g.price.toLocaleString()}`} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              Clear All
+            </Button>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 0, gap: 1, flexWrap: 'wrap' }}>
-          <Button onClick={() => setShareDialogOpen(false)} variant="outlined" sx={{ flex: { xs: '1 1 100%', sm: 'none' } }}>Cancel</Button>
-          <Button variant="contained" onClick={handleShare} disabled={shareGanpatiIds.length === 0} sx={{ bgcolor: '#25D366', flex: { xs: '1 1 100%', sm: 'none' } }}>Send WhatsApp</Button>
+
+        <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, gap: 1, flexWrap: 'wrap', flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
+          <Button
+            onClick={() => setShareDialogOpen(false)}
+            variant="outlined"
+            sx={{ borderRadius: 50, px: 3, width: { xs: '100%', sm: 'auto' } }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleShare}
+            disabled={shareGanpatiIds.length === 0 || sharing}
+            startIcon={sharing ? <CircularProgress size={20} color="inherit" /> : <ShareIcon />}
+            sx={{
+              bgcolor: '#25D366',
+              '&:hover': { bgcolor: '#128C7E' },
+              borderRadius: 50,
+              px: 4,
+              width: { xs: '100%', sm: 'auto' },
+              minHeight: 44,
+            }}
+          >
+            {sharing ? 'Sending...' : `Send WhatsApp (${selectedCustomerIds.length})`}
+          </Button>
         </DialogActions>
       </Dialog>
     </motion.div>
