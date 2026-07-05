@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box, Typography, Grid, Button, Dialog, DialogTitle,
   DialogContent, IconButton, CircularProgress, Tabs, Tab,
-  alpha, Avatar, Chip, Paper,  useTheme
+  alpha, Avatar, Chip, Paper, useTheme, useMediaQuery
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -133,6 +133,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [selectedGanpati, setSelectedGanpati] = useState<GanpatiResponseDto | null>(ganpati);
   const isInitialized = useRef<boolean>(false);
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const isEnquiryMode = mode === 'enquiry';
   const isCustomerMode = mode === 'customer';
@@ -157,7 +158,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     }
   });
 
-  const { watch, reset, handleSubmit, setValue, setError } = methods;
+  const { watch, reset, handleSubmit, setValue, setError, clearErrors } = methods;
   const selectedDistrict = watch('district');
   const talukaOptions = useMemo(() => getTalukaOptions(selectedDistrict), [selectedDistrict]);
 
@@ -224,6 +225,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     setSubmitting(false);
     setTabValue(0);
     isInitialized.current = false;
+    clearErrors();
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number): void => {
@@ -241,6 +243,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
 
   const onSubmit: SubmitHandler<EnquiryFormValues> = async (data) => {
     setSubmitting(true);
+    clearErrors('phone');
 
     try {
       if (isEnquiryMode && selectedGanpati) {
@@ -251,6 +254,22 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
         });
 
         if (response.success) {
+          // Check if the backend indicates the phone already exists
+          const phoneExists = response.message?.toLowerCase().includes('आधीच') || 
+                              response.message?.toLowerCase().includes('already exists') ||
+                              response.message?.toLowerCase().includes('already registered');
+          
+          if (phoneExists) {
+            // Existing phone – show warning, keep dialog open, set field error
+            setError('phone', { 
+              type: 'manual', 
+              message: t('validation.phone_exists', 'Mobile number already exists') 
+            });
+            showSnackbar('warning', t('validation.phone_exists', 'Mobile number already exists'));
+            setSubmitting(false);
+            return;
+          }
+
           showSnackbar('success', t('enquiry.success'));
           
           const message = generateEnquiryMessage(
@@ -266,7 +285,8 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           handleClose();
           if (onSuccess) onSuccess();
         } else {
-          if (response.message?.toLowerCase().includes('phone') || response.message?.toLowerCase().includes('already exists')) {
+          if (response.message?.toLowerCase().includes('phone') || 
+              response.message?.toLowerCase().includes('already exists')) {
             setError('phone', { 
               type: 'manual', 
               message: t('validation.phone_exists', 'Mobile number already exists') 
@@ -291,11 +311,13 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
         }
 
         if (response.success) {
+          // For admin customer mode, treat existing phone as success (idempotent)
           showSnackbar('success', editingCustomer ? t('customer.update_success') : t('customer.register_success'));
           handleClose();
           if (onSuccess) onSuccess();
         } else {
-          if (response.message?.toLowerCase().includes('phone') || response.message?.toLowerCase().includes('already exists')) {
+          if (response.message?.toLowerCase().includes('phone') || 
+              response.message?.toLowerCase().includes('already exists')) {
             setError('phone', { 
               type: 'manual', 
               message: t('validation.phone_exists', 'Mobile number already exists') 
@@ -338,15 +360,13 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     label: `${g.name} (${g.height}) - ₹${g.price.toLocaleString()}`
   }));
 
-  const isMobileScreen = window.innerWidth < 600;
-
   return (
     <Dialog
       open={open}
       onClose={handleClose}
       maxWidth="md"
       fullWidth
-      fullScreen={isMobileScreen}
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
           borderRadius: { xs: 0, sm: 4 },
@@ -371,26 +391,6 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
           gap: 1,
           position: 'relative',
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: '-50%',
-            right: '-20%',
-            width: '200px',
-            height: '200px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)',
-          },
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            bottom: '-30%',
-            left: '-10%',
-            width: '150px',
-            height: '150px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)',
-          }
         }}
       >
         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" sx={{ position: 'relative', zIndex: 1 }}>

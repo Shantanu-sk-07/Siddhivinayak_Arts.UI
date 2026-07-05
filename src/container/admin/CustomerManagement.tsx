@@ -65,6 +65,8 @@ export default function CustomerManagement() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareGanpatiIds, setShareGanpatiIds] = useState<string[]>([]);
   const [sharing, setSharing] = useState(false);
+  const [previewGanpati, setPreviewGanpati] = useState<GanpatiResponseDto | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const methods = useForm<PromoteFormData>({
     defaultValues: { ganpatiId: '', totalPrice: 0, advancePayment: 0, remainingPayment: 0, bookingDate: new Date().toISOString().split('T')[0], notes: '' }
@@ -237,7 +239,7 @@ export default function CustomerManagement() {
             window.open(`https://wa.me/${phoneNumbers[i]}?text=${encoded}`, '_blank');
             opened++;
             resolve();
-          }, i * 500);
+          }, i * 800);
         });
       }
 
@@ -251,6 +253,11 @@ export default function CustomerManagement() {
     } finally {
       setSharing(false);
     }
+  };
+
+  const handlePreviewGanpati = (ganpati: GanpatiResponseDto) => {
+    setPreviewGanpati(ganpati);
+    setPreviewOpen(true);
   };
 
   return (
@@ -412,7 +419,7 @@ export default function CustomerManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Share Dialog - Enhanced with Autocomplete */}
+      {/* Share Dialog */}
       <Dialog
         open={shareDialogOpen}
         onClose={() => setShareDialogOpen(false)}
@@ -438,7 +445,7 @@ export default function CustomerManagement() {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6' }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
               Selected Customers: <Chip label={selectedCustomerIds.length} size="small" color="primary" />
@@ -465,20 +472,42 @@ export default function CustomerManagement() {
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disableCloseOnSelect
             filterSelectedOptions
-           renderOption={(props, option, { selected }) => (
-  <li {...props} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>
-    <Checkbox checked={selected} size="small" sx={{ padding: '2px' }} />
-    <Box display="flex" alignItems="center" gap={1}>
-      {option.images?.[0] && <Avatar src={option.images[0]} sx={{ width: 24, height: 24, borderRadius: 1 }} />}
-      <Box>
-        <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.8rem' }}>{option.name}</Typography>
-        <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
-          {option.height} • ₹{option.price.toLocaleString()}
-        </Typography>
-      </Box>
-    </Box>
-  </li>
-)}
+            renderOption={(props, option, { selected }) => (
+              <li {...props} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>
+                <Checkbox checked={selected} size="small" sx={{ padding: '2px' }} />
+                <Box display="flex" alignItems="center" gap={1}>
+                  {option.images?.[0] && (
+                    <Avatar src={option.images[0]} sx={{ width: 24, height: 24, borderRadius: 1 }} />
+                  )}
+                  <Box>
+                    <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.8rem' }}>
+                      {option.name}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                      {option.height} • ₹{option.price.toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </li>
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  avatar={option.images?.[0] ? <Avatar src={option.images[0]} sx={{ width: 22, height: 22 }} /> : undefined}
+                  label={option.name}
+                  size="small"
+                  onClick={() => handlePreviewGanpati(option)}
+                  sx={{ 
+                    fontSize: '0.65rem', 
+                    height: 28, 
+                    '& .MuiChip-label': { px: 1 },
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                  }}
+                  {...getTagProps({ index })}
+                />
+              ))
+            }
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -495,7 +524,7 @@ export default function CustomerManagement() {
             )}
             ListboxProps={{
               style: {
-                maxHeight: 280,
+                maxHeight: 200,
                 overflow: 'auto',
                 fontSize: '0.8rem',
               },
@@ -549,6 +578,113 @@ export default function CustomerManagement() {
             }}
           >
             {sharing ? 'Sending...' : `Send WhatsApp (${selectedCustomerIds.length})`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Ganpati Preview Dialog */}
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 3 },
+            overflow: 'hidden',
+            margin: { xs: 0, sm: 'auto' },
+            maxHeight: { xs: '100vh', sm: '85vh' },
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #E65100, #FF8F00)', 
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          py: 2,
+          px: 3
+        }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <CategoryIcon />
+            <Typography variant="h6" fontWeight={700}>Ganpati Preview</Typography>
+          </Box>
+          <IconButton onClick={() => setPreviewOpen(false)} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6', overflow: 'auto' }}>
+          {previewGanpati && (
+            <Box>
+              <Box sx={{ 
+                width: '100%', 
+                maxHeight: { xs: '250px', sm: '350px' }, 
+                overflow: 'hidden',
+                borderRadius: 2,
+                bgcolor: '#f5f0eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+               <img
+  src={previewGanpati.images?.[0] || '/placeholder.jpg'}
+  alt={previewGanpati.name}
+  style={{
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain'
+  }}
+/>
+              </Box>
+
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'white', borderRadius: 2 }}>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  {previewGanpati.name}
+                </Typography>
+                <Grid container spacing={1.5}>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="caption" color="textSecondary">Height</Typography>
+                    <Typography variant="body2" fontWeight={600}>{previewGanpati.height}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="caption" color="textSecondary">Material</Typography>
+                    <Typography variant="body2" fontWeight={600}>{previewGanpati.material}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="caption" color="textSecondary">Price</Typography>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: '#E65100' }}>
+                      ₹{previewGanpati.price.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="caption" color="textSecondary">Available</Typography>
+                    <Chip 
+                      label={`${previewGanpati.availableSlots} slots`}
+                      size="small"
+                      color={previewGanpati.availableSlots > 0 ? 'success' : 'error'}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, borderTop: '1px solid #f0ebe6', gap: 1 }}>
+          <Button
+            onClick={() => setPreviewOpen(false)}
+            variant="contained"
+            fullWidth
+            sx={{
+              borderRadius: 50,
+              py: 1.5,
+              background: 'linear-gradient(135deg, #E65100, #FF8F00)',
+            }}
+          >
+            OK
           </Button>
         </DialogActions>
       </Dialog>
