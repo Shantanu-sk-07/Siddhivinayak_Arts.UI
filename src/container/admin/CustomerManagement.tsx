@@ -5,12 +5,9 @@ import {
   Grid, IconButton, Tooltip, Avatar, LinearProgress, Tabs, Tab,
   Checkbox, Autocomplete, TextField, CircularProgress, useMediaQuery
 } from '@mui/material';
-import { 
-  Close as CloseIcon, 
-  ArrowUpward as PromoteIcon, 
-  Edit as EditIcon, Delete as DeleteIcon,
-  Person as PersonIcon, Phone as PhoneIcon, 
-  LocationOn as LocationOnIcon, Category as CategoryIcon,
+import {
+  Close as CloseIcon, ArrowUpward as PromoteIcon, Edit as EditIcon, Delete as DeleteIcon,
+  Person as PersonIcon, Phone as PhoneIcon, LocationOn as LocationOnIcon, Category as CategoryIcon,
   Share as ShareIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -20,8 +17,8 @@ import { UniversalTable, Column, ACTION_KEY } from '@/components/uncontrolled/Un
 import { showSnackbar, showConfirmation } from '@/components/uncontrolled/ToastMessage';
 import { adminService } from '@/services/AdminService';
 import { ganpatiService } from '@/services/GanpatiService';
-import { 
-  User, GanpatiResponseDto, CustomerRecord, ViewCustomerData, PromoteFormData 
+import {
+  User, GanpatiResponseDto, CustomerRecord, ViewCustomerData, PromoteFormData
 } from '@/types/MurtiType';
 import EnquiryForm from '@/container/public/EnquiryForm';
 import DropdownField from '@/components/controlled/DropdownField';
@@ -67,6 +64,7 @@ export default function CustomerManagement() {
   const [sharing, setSharing] = useState(false);
   const [previewGanpati, setPreviewGanpati] = useState<GanpatiResponseDto | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [tableKey, setTableKey] = useState(0);
 
   const methods = useForm<PromoteFormData>({
     defaultValues: { ganpatiId: '', totalPrice: 0, advancePayment: 0, remainingPayment: 0, bookingDate: new Date().toISOString().split('T')[0], notes: '' }
@@ -205,7 +203,6 @@ export default function CustomerManagement() {
       'Confirm Send'
     );
     if (!confirm) return;
-
     try {
       setSharing(true);
       const res = await adminService.createShareCollection({
@@ -220,7 +217,6 @@ export default function CustomerManagement() {
       }
       let shareUrl = res.data.shareUrl;
       if (!shareUrl.startsWith('http://') && !shareUrl.startsWith('https://')) shareUrl = `https://${shareUrl}`;
-
       const selectedCustomers = customers.filter(c => selectedCustomerIds.includes(c.id));
       const phoneNumbers = selectedCustomers.map(c => c.phone).filter(p => p && p.length > 0);
       if (phoneNumbers.length === 0) {
@@ -228,25 +224,16 @@ export default function CustomerManagement() {
         setSharing(false);
         return;
       }
-
       const message = `Namaste 🙏\n\nYour selected Ganpati collection is ready.\n\nClick below to view.\n${shareUrl}`;
       const encoded = encodeURIComponent(message);
-
-      let opened = 0;
-      for (let i = 0; i < phoneNumbers.length; i++) {
-        await new Promise<void>((resolve) => {
-          setTimeout(() => {
-            window.open(`https://wa.me/${phoneNumbers[i]}?text=${encoded}`, '_blank');
-            opened++;
-            resolve();
-          }, i * 800);
-        });
+      for (const phone of phoneNumbers) {
+        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
       }
-
-      showSnackbar('success', `WhatsApp links opened for ${opened} customers`);
+      showSnackbar('success', `WhatsApp links opened for ${phoneNumbers.length} customers`);
       setShareDialogOpen(false);
       setSelectedCustomerIds([]);
       setShareGanpatiIds([]);
+      setTableKey(prev => prev + 1);
     } catch (error) {
       console.error('Share error:', error);
       showSnackbar('error', 'Failed to create share link');
@@ -286,6 +273,7 @@ export default function CustomerManagement() {
           </Tabs>
 
           <UniversalTable<CustomerRecord>
+            key={tableKey}
             data={tableData}
             columns={columns}
             loading={loading}
@@ -318,7 +306,6 @@ export default function CustomerManagement() {
 
       <EnquiryForm open={enquiryFormOpen} onClose={() => setEnquiryFormOpen(false)} mode="customer" ganpatiList={ganpatiList} editingCustomer={editingCustomer} onSuccess={handleEnquiryFormSuccess} />
 
-      {/* Promote Dialog */}
       <Dialog open={promoteDialogOpen} onClose={() => !submitting && setPromoteDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: { xs: 0, sm: 4 }, maxHeight: '90vh', overflow: 'hidden' } }}>
         <DialogTitle sx={{ background: 'linear-gradient(135deg, #E65100 0%, #F57C00 30%, #FF8F00 60%, #FFA726 100%)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: { xs: 1.5, sm: 2.5 }, px: { xs: 2, sm: 3 } }}>
           <Box><Typography variant="h6" fontWeight={700}><PromoteIcon sx={{ mr: 1, verticalAlign: 'middle' }} />{t('customer.promote_to_booking')}</Typography><Typography variant="caption" sx={{ opacity: 0.85 }}>{selectedCustomer?.name} • {selectedCustomer?.phone}</Typography></Box>
@@ -348,7 +335,6 @@ export default function CustomerManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* View Customer Dialog */}
       <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
         <DialogTitle sx={{ background: 'linear-gradient(135deg, #E65100, #F57C00, #FF8F00, #FFA726)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2.5, px: 3 }}>
           <Box display="flex" alignItems="center" gap={1.5}><PersonIcon sx={{ fontSize: 28 }} /><Typography variant="h6" fontWeight={700}>{t('customer.customer_details')}</Typography></Box>
@@ -419,23 +405,8 @@ export default function CustomerManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Share Dialog */}
-      <Dialog
-        open={shareDialogOpen}
-        onClose={() => setShareDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-        PaperProps={{
-          sx: {
-            borderRadius: { xs: 0, sm: 4 },
-            overflow: 'hidden',
-            margin: { xs: 0, sm: 'auto' },
-            maxHeight: { xs: '100vh', sm: '90vh' },
-          }
-        }}
-      >
-        <DialogTitle sx={{ bgcolor: '#25D366', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, px: 3 }}>
+      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile} PaperProps={{ sx: { borderRadius: { xs: 0, sm: 4 }, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}>
+        <DialogTitle sx={{ bgcolor: '#25D366', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, px: 3, flexShrink: 0 }}>
           <Box display="flex" alignItems="center" gap={1}>
             <ShareIcon />
             <Typography variant="h6" fontWeight={700}>Send Ganpati Collection</Typography>
@@ -445,19 +416,19 @@ export default function CustomerManagement() {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ mb: 2 }}>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: '#faf8f6', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          <Box sx={{ flexShrink: 0, mb: 1.5 }}>
             <Typography variant="subtitle2" gutterBottom>
               Selected Customers: <Chip label={selectedCustomerIds.length} size="small" color="primary" />
             </Typography>
-            <Box sx={{ mt: 1, mb: 2, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
+            <Box sx={{ mt: 1, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2, maxHeight: 60, overflow: 'auto' }}>
               <Typography variant="caption" color="textSecondary" display="block">
                 Numbers: {selectedCustomerIds.map(id => customers.find(c => c.id === id)?.phone).filter(Boolean).join(', ') || 'None'}
               </Typography>
             </Box>
           </Box>
 
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, flexShrink: 0 }}>
             Select Ganpati to Share:
           </Typography>
 
@@ -466,9 +437,7 @@ export default function CustomerManagement() {
             options={ganpatiList}
             getOptionLabel={(option) => `${option.name} (${option.height}) - ₹${option.price.toLocaleString()}`}
             value={ganpatiList.filter(g => shareGanpatiIds.includes(g.id))}
-            onChange={(_, newValue) => {
-              setShareGanpatiIds(newValue.map(g => g.id));
-            }}
+            onChange={(_, newValue) => setShareGanpatiIds(newValue.map(g => g.id))}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disableCloseOnSelect
             filterSelectedOptions
@@ -497,9 +466,9 @@ export default function CustomerManagement() {
                   label={option.name}
                   size="small"
                   onClick={() => handlePreviewGanpati(option)}
-                  sx={{ 
-                    fontSize: '0.65rem', 
-                    height: 28, 
+                  sx={{
+                    fontSize: '0.65rem',
+                    height: 28,
                     '& .MuiChip-label': { px: 1 },
                     cursor: 'pointer',
                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
@@ -524,9 +493,8 @@ export default function CustomerManagement() {
             )}
             ListboxProps={{
               style: {
-                maxHeight: 200,
+                maxHeight: isMobile ? 120 : 200,
                 overflow: 'auto',
-                fontSize: '0.8rem',
               },
               sx: {
                 '& .MuiAutocomplete-option': {
@@ -540,7 +508,7 @@ export default function CustomerManagement() {
             fullWidth
           />
 
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ flexShrink: 0, mt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="caption" color="textSecondary">
               Selected: {shareGanpatiIds.length} Ganpati
             </Typography>
@@ -555,7 +523,7 @@ export default function CustomerManagement() {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, gap: 1, flexWrap: 'wrap', flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
+        <DialogActions sx={{ p: { xs: 1.5, sm: 3 }, pt: 0, gap: 1, flexWrap: 'wrap', flexDirection: { xs: 'column-reverse', sm: 'row' }, flexShrink: 0 }}>
           <Button
             onClick={() => setShareDialogOpen(false)}
             variant="outlined"
@@ -582,31 +550,8 @@ export default function CustomerManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Ganpati Preview Dialog */}
-      <Dialog
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-        PaperProps={{
-          sx: {
-            borderRadius: { xs: 0, sm: 3 },
-            overflow: 'hidden',
-            margin: { xs: 0, sm: 'auto' },
-            maxHeight: { xs: '100vh', sm: '85vh' },
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          background: 'linear-gradient(135deg, #E65100, #FF8F00)', 
-          color: 'white',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          py: 2,
-          px: 3
-        }}>
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile} PaperProps={{ sx: { borderRadius: { xs: 0, sm: 3 }, overflow: 'hidden', margin: { xs: 0, sm: 'auto' }, maxHeight: { xs: '100vh', sm: '85vh' } } }}>
+        <DialogTitle sx={{ background: 'linear-gradient(135deg, #E65100, #FF8F00)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, px: 3 }}>
           <Box display="flex" alignItems="center" gap={1.5}>
             <CategoryIcon />
             <Typography variant="h6" fontWeight={700}>Ganpati Preview</Typography>
@@ -619,27 +564,13 @@ export default function CustomerManagement() {
         <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#faf8f6', overflow: 'auto' }}>
           {previewGanpati && (
             <Box>
-              <Box sx={{ 
-                width: '100%', 
-                maxHeight: { xs: '250px', sm: '350px' }, 
-                overflow: 'hidden',
-                borderRadius: 2,
-                bgcolor: '#f5f0eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-               <img
-  src={previewGanpati.images?.[0] || '/placeholder.jpg'}
-  alt={previewGanpati.name}
-  style={{
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain'
-  }}
-/>
+              <Box sx={{ width: '100%', maxHeight: { xs: '250px', sm: '350px' }, overflow: 'hidden', borderRadius: 2, bgcolor: '#f5f0eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img
+                  src={previewGanpati.images?.[0] || '/placeholder.jpg'}
+                  alt={previewGanpati.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
               </Box>
-
               <Box sx={{ mt: 2, p: 2, bgcolor: 'white', borderRadius: 2 }}>
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   {previewGanpati.name}
@@ -661,7 +592,7 @@ export default function CustomerManagement() {
                   </Grid>
                   <Grid size={{ xs: 6 }}>
                     <Typography variant="caption" color="textSecondary">Available</Typography>
-                    <Chip 
+                    <Chip
                       label={`${previewGanpati.availableSlots} slots`}
                       size="small"
                       color={previewGanpati.availableSlots > 0 ? 'success' : 'error'}
@@ -678,11 +609,7 @@ export default function CustomerManagement() {
             onClick={() => setPreviewOpen(false)}
             variant="contained"
             fullWidth
-            sx={{
-              borderRadius: 50,
-              py: 1.5,
-              background: 'linear-gradient(135deg, #E65100, #FF8F00)',
-            }}
+            sx={{ borderRadius: 50, py: 1.5, background: 'linear-gradient(135deg, #E65100, #FF8F00)' }}
           >
             OK
           </Button>
